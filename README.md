@@ -18,8 +18,11 @@ The old `PUT /api/records` (replace the whole set) has been removed from the
 backend, because it caused one device's stale copy to overwrite another
 device's changes.
 
-Each record can also store an optional LINE link (`lineLink`), shown under
-the person's name in the detail view.
+Each record can also store an optional LINE name (`lineName`), shown under
+the person's name in the detail view with a copy button.
+
+The "รอส่งของ" (pending) and "ประวัติ" (history) tabs have a search box that
+filters by name, LINE name, room or tracking number.
 
 ## Configure the backend URL
 
