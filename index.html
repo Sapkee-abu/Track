@@ -98,7 +98,7 @@
     </main>
 
     <!-- Floating add button -->
-    <button onclick="openFormModal()" class="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg shadow-blue-600/30 hover:bg-blue-700 transition-colors z-20 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-200 flex items-center justify-center" aria-label="เพิ่มข้อมูลพัสดุ">
+    <button id="fab" onclick="openFormModal()" class="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg shadow-blue-600/30 hover:bg-blue-700 transition-colors z-20 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-200 flex items-center justify-center" aria-label="เพิ่มข้อมูลพัสดุ">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 5v14m7-7H5" /></svg>
     </button>
 
@@ -106,7 +106,12 @@
     <div id="detail-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-gray-900/30 backdrop-blur-sm p-4">
         <div class="bg-white rounded-[28px] shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden transform scale-95 opacity-0 transition-all duration-200" id="detail-modal-content">
             <div class="px-5 pt-4 pb-1 flex justify-between items-center">
-                <h3 class="text-sm font-medium text-gray-400">รายละเอียดพัสดุ</h3>
+                <div class="flex items-center gap-1 min-w-0">
+                    <button id="detail-back-btn" class="hidden w-9 h-9 -ml-2 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 transition-colors" aria-label="กลับ">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                    </button>
+                    <h3 id="detail-modal-title" class="text-sm font-medium text-gray-400 truncate">รายละเอียดพัสดุ</h3>
+                </div>
                 <button onclick="closeDetailModal()" class="w-9 h-9 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors" aria-label="ปิด">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
@@ -238,6 +243,14 @@
 
         // Search text per tab, kept while switching tabs / refreshing
         const searchQueries = { pending: '', history: '' };
+
+        // History selection (for deleting)
+        let historySelectMode = false;
+        let selectedHistoryIds = new Set();
+        let rerenderHistoryList = null;
+
+        // Summary: records grouped per day, used by the day-detail popup
+        let summaryDays = {};
 
         // ---------- Helpers ----------
 
@@ -462,6 +475,7 @@
 
         function switchTab(tabId) {
             currentTab = tabId;
+            exitHistorySelectMode(false);
             renderTabs();
             closeMobileMenu();
             document.getElementById('main-content').scrollTop = 0;
@@ -480,15 +494,26 @@
 
         // ---------- Tabs ----------
 
+        function dayKeyOf(ts) {
+            const d = new Date(ts);
+            return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+        }
+
+        function thaiDateLong(d) {
+            return `วัน${THAI_DAY_NAMES[d.getDay()]}ที่ ${d.getDate()} ${THAI_MONTH_NAMES[d.getMonth()]} ${d.getFullYear() + 543}`;
+        }
+
         function renderSummaryTab(container) {
             const completedRecords = records.filter(r => r.status === 'completed');
 
-            const dayMap = {};
+            summaryDays = {};
             completedRecords.forEach(record => {
-                const d = new Date(record.updatedAt);
-                const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-                if (!dayMap[key]) dayMap[key] = { dateObj: d, totalItems: 0, totalRevenue: 0, byTransport: {} };
-                const day = dayMap[key];
+                const key = dayKeyOf(record.updatedAt);
+                if (!summaryDays[key]) {
+                    summaryDays[key] = { key, dateObj: new Date(record.updatedAt), totalItems: 0, totalRevenue: 0, byTransport: {}, records: [] };
+                }
+                const day = summaryDays[key];
+                day.records.push(record);
                 record.items.forEach(item => {
                     const fee = getItemFee(item.transport);
                     day.totalItems += 1;
@@ -499,7 +524,7 @@
                 });
             });
 
-            const days = Object.values(dayMap).sort((a, b) => b.dateObj - a.dateObj);
+            const days = Object.values(summaryDays).sort((a, b) => b.dateObj - a.dateObj);
 
             if (days.length === 0) {
                 container.innerHTML = emptyState('💰', 'ยังไม่มีพัสดุที่ส่งสำเร็จ');
@@ -519,9 +544,6 @@
             `;
 
             days.forEach(day => {
-                const d = day.dateObj;
-                const dateStr = `วัน${THAI_DAY_NAMES[d.getDay()]}ที่ ${d.getDate()} ${THAI_MONTH_NAMES[d.getMonth()]} ${d.getFullYear() + 543}`;
-
                 const transportRows = TRANSPORTS
                     .filter(t => day.byTransport[t.id])
                     .map(t => {
@@ -535,21 +557,77 @@
                     }).join('');
 
                 html += `
-                    <section class="card p-2">
+                    <button onclick="openDayDetail('${day.key}')" class="card p-2 w-full text-left block hover:shadow-md transition-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-200">
                         <div class="flex justify-between items-center px-3 pt-2 pb-1">
-                            <span class="font-medium text-gray-700">${dateStr}</span>
+                            <span class="font-medium text-gray-700">${thaiDateLong(day.dateObj)}</span>
                             <span class="font-semibold text-blue-600">${day.totalRevenue.toLocaleString()} บาท</span>
                         </div>
                         ${transportRows}
-                        <div class="mx-1 mt-1 px-3 py-2 rounded-2xl bg-gray-50 flex justify-between text-sm text-gray-500">
-                            <span>รวม ${day.totalItems} ชิ้น</span>
-                            <span>${day.totalRevenue.toLocaleString()} บาท</span>
+                        <div class="mx-1 mt-1 px-3 py-2 rounded-2xl bg-gray-50 flex justify-between items-center text-sm text-gray-500">
+                            <span>รวม ${day.totalItems} ชิ้น จาก ${day.records.length} คน</span>
+                            <span class="flex items-center gap-0.5 text-blue-600 font-medium">ดูรายละเอียด ${ICON.chevron.replace('text-gray-300', 'text-blue-400')}</span>
                         </div>
-                    </section>`;
+                    </button>`;
             });
 
             html += '</div>';
             container.innerHTML = html;
+        }
+
+        // Popup: who got parcels on that day, how many pieces each, how much.
+        function openDayDetail(key) {
+            const day = summaryDays[key];
+            if (!day) return;
+
+            const roomOrder = room => { const i = DORM_ROOMS.indexOf(room); return i === -1 ? 999 : i; };
+            const people = [...day.records].sort((a, b) =>
+                roomOrder(a.room) - roomOrder(b.room) || a.name.localeCompare(b.name, 'th'));
+
+            const chips = TRANSPORTS
+                .filter(t => day.byTransport[t.id])
+                .map(t => `<span class="text-xs px-2.5 py-1 rounded-full ${t.badgeClass}">${t.icon} ${day.byTransport[t.id].count} ชิ้น</span>`)
+                .join('');
+
+            const rows = people.map(record => {
+                const count = record.items.length;
+                const revenue = record.items.reduce((sum, i) => sum + getItemFee(i.transport), 0);
+                const perTransport = TRANSPORTS
+                    .map(t => ({ t, n: record.items.filter(i => i.transport === t.id).length }))
+                    .filter(x => x.n > 0)
+                    .map(x => `${x.t.icon} ${x.n}`)
+                    .join('  ');
+                const d = new Date(record.updatedAt);
+                const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                return `
+                    <li>
+                        <button onclick="openDetailModal(${record.id}, '${key}')" class="w-full text-left bg-gray-50 hover:bg-gray-100 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-200">
+                            <div class="min-w-0">
+                                <div class="font-medium text-gray-800 truncate">${escapeHtml(record.name)}</div>
+                                <div class="text-xs text-gray-400 mt-0.5 truncate">หอพัก ${escapeHtml(record.room)} เวลา ${time}${record.lineName ? ` · LINE ${escapeHtml(record.lineName)}` : ''}</div>
+                                <div class="text-xs text-gray-500 mt-1">${perTransport}</div>
+                            </div>
+                            <div class="text-right flex-shrink-0">
+                                <div class="text-sm font-semibold text-gray-800">${count} ชิ้น</div>
+                                <div class="text-xs text-gray-400">${revenue.toLocaleString()} บาท</div>
+                            </div>
+                        </button>
+                    </li>`;
+            }).join('');
+
+            document.getElementById('detail-modal-title').innerText = 'สรุปยอดรายวัน';
+            setDetailBack(null);
+            document.getElementById('detail-modal-body').innerHTML = `
+                <div class="text-center pt-1 mb-4">
+                    <p class="text-sm text-gray-500">${thaiDateLong(day.dateObj)}</p>
+                    <p class="text-3xl font-semibold text-gray-900 mt-1">${day.totalRevenue.toLocaleString()} <span class="text-lg font-normal text-gray-400">บาท</span></p>
+                    <p class="text-sm text-gray-500 mt-1">${day.totalItems} ชิ้น จาก ${people.length} คน</p>
+                    <div class="flex flex-wrap justify-center gap-1.5 mt-3">${chips}</div>
+                </div>
+                <ul class="space-y-2">${rows}</ul>`;
+            document.getElementById('detail-modal-actions').innerHTML =
+                `<button onclick="closeDetailModal()" class="${BTN.soft}">ปิด</button>`;
+
+            showDetailModal();
         }
 
         function renderAllTab(container) {
@@ -583,12 +661,12 @@
 
         function renderPending(container) {
             const pendingRecords = records.filter(r => r.status === 'pending');
-            if (pendingRecords.length === 0) {
-                container.innerHTML = emptyState('📦', 'ไม่มีพัสดุที่รอส่ง');
-                return;
-            }
 
             renderSearchableTab(container, 'pending', 'ค้นหาชื่อ ชื่อไลน์ หอ หรือเลขพัสดุ', (area, query) => {
+                if (pendingRecords.length === 0) {
+                    area.innerHTML = emptyState('📦', 'ไม่มีพัสดุที่รอส่ง');
+                    return;
+                }
                 const filtered = pendingRecords.filter(r => matchesQuery(r, query));
                 if (filtered.length === 0) {
                     area.innerHTML = emptyState('🔍', `ไม่พบรายการที่ตรงกับ “${escapeHtml(query.trim())}”`);
@@ -601,32 +679,151 @@
             });
         }
 
+        function historyRow(record) {
+            const isCompleted = record.status === 'completed';
+            const status = isCompleted
+                ? countBadge('เสร็จสิ้น', 'bg-green-50 text-green-700')
+                : countBadge('ยกเลิก/ลบ', 'bg-red-50 text-red-600');
+            const d = new Date(record.updatedAt);
+            const dateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear() + 543} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+            const sub = `<div class="text-xs text-gray-400 mt-0.5">${dateStr}</div>`;
+
+            if (!historySelectMode) return recordRow(record, status, sub);
+
+            const checked = selectedHistoryIds.has(record.id);
+            return `
+                <button onclick="toggleHistorySelect(${record.id})" aria-pressed="${checked}" class="w-full text-left px-3 py-3 rounded-2xl ${checked ? 'bg-red-50' : 'hover:bg-gray-50'} transition-colors flex items-center gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-200">
+                    <span class="flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center ${checked ? 'bg-red-500 border-red-500 text-white' : 'border-gray-300 text-transparent'}">${ICON.check}</span>
+                    <div class="min-w-0 flex-1">
+                        <div class="font-medium text-gray-800 truncate">${escapeHtml(record.name)}</div>
+                        ${sub}
+                    </div>
+                    ${status}
+                </button>`;
+        }
+
         function renderHistory(container) {
             const historyRecords = records
                 .filter(r => r.status === 'completed' || r.status === 'deleted')
                 .sort((a, b) => b.updatedAt - a.updatedAt);
 
-            if (historyRecords.length === 0) {
-                container.innerHTML = emptyState('🕒', 'ยังไม่มีประวัติการทำรายการ');
+            renderSearchableTab(container, 'history', 'ค้นหาชื่อ ชื่อไลน์ หอ หรือเลขพัสดุ', (area, query) => {
+                rerenderHistoryList = () => {
+                    if (historyRecords.length === 0) {
+                        exitHistorySelectMode(false);
+                        area.innerHTML = emptyState('🕒', 'ยังไม่มีประวัติการทำรายการ');
+                        return;
+                    }
+
+                    const q = searchQueries.history;
+                    const filtered = historyRecords.filter(r => matchesQuery(r, q));
+
+                    // Only keep selections that are still visible
+                    const visibleIds = new Set(filtered.map(r => r.id));
+                    selectedHistoryIds = new Set([...selectedHistoryIds].filter(id => visibleIds.has(id)));
+
+                    const allSelected = filtered.length > 0 && filtered.every(r => selectedHistoryIds.has(r.id));
+
+                    const toolbar = historySelectMode ? `
+                        <div class="card px-3 py-2 mb-3 flex items-center gap-2">
+                            <button onclick="toggleSelectAllHistory()" class="flex items-center gap-2 px-2 py-1.5 rounded-full hover:bg-gray-50 text-sm text-gray-700 focus:outline-none">
+                                <span class="w-6 h-6 rounded-full border-2 flex items-center justify-center ${allSelected ? 'bg-red-500 border-red-500 text-white' : 'border-gray-300 text-transparent'}">${ICON.check}</span>
+                                เลือกทั้งหมด${q.trim() ? 'ที่ค้นเจอ' : ''}
+                            </button>
+                            <span class="ml-auto text-sm text-gray-400">เลือก ${selectedHistoryIds.size}</span>
+                            <button onclick="exitHistorySelectMode()" class="${BTN.soft} !py-1.5">ยกเลิก</button>
+                        </div>` : `
+                        <div class="flex items-center justify-between mb-3 px-1">
+                            <span class="text-xs text-gray-400">${q.trim() ? `พบ ${filtered.length} รายการ` : `ทั้งหมด ${historyRecords.length} รายการ`}</span>
+                            <button onclick="enterHistorySelectMode()" class="flex items-center gap-1 text-sm text-red-600 bg-red-50 hover:bg-red-100 px-3.5 py-1.5 rounded-full transition-colors">${ICON.trash} ลบประวัติ</button>
+                        </div>`;
+
+                    if (filtered.length === 0) {
+                        area.innerHTML = toolbar + emptyState('🔍', `ไม่พบรายการที่ตรงกับ “${escapeHtml(q.trim())}”`);
+                    } else {
+                        area.innerHTML = toolbar + roomCards(filtered, historyRow);
+                    }
+                    updateDeleteBar();
+                };
+                rerenderHistoryList();
+            });
+        }
+
+        function enterHistorySelectMode() {
+            historySelectMode = true;
+            selectedHistoryIds = new Set();
+            document.getElementById('fab').classList.add('hidden');
+            if (rerenderHistoryList) rerenderHistoryList();
+        }
+
+        function exitHistorySelectMode(rerender = true) {
+            historySelectMode = false;
+            selectedHistoryIds = new Set();
+            document.getElementById('fab').classList.remove('hidden');
+            updateDeleteBar();
+            if (rerender && rerenderHistoryList && currentTab === 'history') rerenderHistoryList();
+        }
+
+        function toggleHistorySelect(id) {
+            if (selectedHistoryIds.has(id)) selectedHistoryIds.delete(id);
+            else selectedHistoryIds.add(id);
+            rerenderHistoryList();
+        }
+
+        function toggleSelectAllHistory() {
+            const q = searchQueries.history;
+            const filtered = records.filter(r =>
+                (r.status === 'completed' || r.status === 'deleted') && matchesQuery(r, q));
+            const allSelected = filtered.length > 0 && filtered.every(r => selectedHistoryIds.has(r.id));
+            filtered.forEach(r => allSelected ? selectedHistoryIds.delete(r.id) : selectedHistoryIds.add(r.id));
+            rerenderHistoryList();
+        }
+
+        // Red floating bar at the bottom while selecting
+        function updateDeleteBar() {
+            let bar = document.getElementById('delete-bar');
+            if (!historySelectMode || currentTab !== 'history') {
+                if (bar) bar.remove();
                 return;
             }
+            if (!bar) {
+                bar = document.createElement('div');
+                bar.id = 'delete-bar';
+                bar.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 z-30';
+                document.body.appendChild(bar);
+            }
+            const n = selectedHistoryIds.size;
+            bar.innerHTML = `
+                <button onclick="deleteSelectedHistory()" ${n === 0 ? 'disabled' : ''}
+                        class="flex items-center gap-2 px-6 py-3 rounded-full text-sm font-medium shadow-lg transition-colors ${n === 0 ? 'bg-gray-200 text-gray-400' : 'bg-red-600 text-white hover:bg-red-700 shadow-red-600/30'}">
+                    ${ICON.trash} ลบ ${n} รายการ
+                </button>`;
+        }
 
-            renderSearchableTab(container, 'history', 'ค้นหาชื่อ ชื่อไลน์ หอ หรือเลขพัสดุ', (area, query) => {
-                const filtered = historyRecords.filter(r => matchesQuery(r, query));
-                if (filtered.length === 0) {
-                    area.innerHTML = emptyState('🔍', `ไม่พบรายการที่ตรงกับ “${escapeHtml(query.trim())}”`);
-                    return;
+        function deleteSelectedHistory() {
+            const ids = [...selectedHistoryIds];
+            if (ids.length === 0) return;
+
+            const completedCount = records.filter(r => ids.includes(r.id) && r.status === 'completed').length;
+            const message = `ลบ ${ids.length} รายการออกจากประวัติถาวร กู้คืนไม่ได้`
+                + (completedCount ? ` และยอดเงินของ ${completedCount} รายการที่ส่งสำเร็จจะหายจากหน้าสรุปยอดด้วย` : '');
+
+            openConfirmModal('ลบประวัติ?', message, async () => {
+                const idSet = new Set(ids);
+                records = records.filter(r => !idSet.has(r.id));
+                exitHistorySelectMode(false);
+                renderApp();
+
+                try {
+                    await apiRequest('POST', '/api/records/bulk-delete', { ids });
+                    showToast(`ลบ ${ids.length} รายการแล้ว`, 'success');
+                } catch (e) {
+                    console.error('Error deleting history', e);
+                    showToast('ลบไม่สำเร็จ', 'error');
+                    await loadData();
+                    renderApp();
                 }
-                area.innerHTML = searchResultInfo(filtered.length, query) + roomCards(filtered, record => {
-                    const isCompleted = record.status === 'completed';
-                    const status = isCompleted
-                        ? countBadge('เสร็จสิ้น', 'bg-green-50 text-green-700')
-                        : countBadge('ยกเลิก/ลบ', 'bg-red-50 text-red-600');
-                    const d = new Date(record.updatedAt);
-                    const dateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear() + 543} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-                    return recordRow(record, status, `<div class="text-xs text-gray-400 mt-0.5">${dateStr}</div>`);
-                });
-            });
+            }, true);
         }
 
         // ---------- Detail modal ----------
@@ -651,9 +848,28 @@
                 </li>`;
         }
 
-        function openDetailModal(id) {
+        function setDetailBack(onBack) {
+            const btn = document.getElementById('detail-back-btn');
+            btn.onclick = onBack;
+            btn.classList.toggle('hidden', !onBack);
+            btn.classList.toggle('flex', !!onBack);
+        }
+
+        function showDetailModal() {
+            const modal = document.getElementById('detail-modal');
+            const content = document.getElementById('detail-modal-content');
+            document.getElementById('detail-modal-body').scrollTop = 0;
+            modal.classList.remove('hidden');
+            setTimeout(() => content.classList.remove('scale-95', 'opacity-0'), 10);
+        }
+
+        // backDayKey: set when opened from the daily summary popup, shows a back button
+        function openDetailModal(id, backDayKey = null) {
             const record = records.find(r => r.id === id);
             if (!record) return;
+
+            document.getElementById('detail-modal-title').innerText = 'รายละเอียดพัสดุ';
+            setDetailBack(backDayKey ? () => openDayDetail(backDayKey) : null);
 
             const modal = document.getElementById('detail-modal');
             const content = document.getElementById('detail-modal-content');
@@ -736,8 +952,7 @@
                 `;
             }
 
-            modal.classList.remove('hidden');
-            setTimeout(() => content.classList.remove('scale-95', 'opacity-0'), 10);
+            showDetailModal();
         }
 
         function closeDetailModal() {
@@ -1037,11 +1252,13 @@
 
         let confirmActionCallback = null;
 
-        function openConfirmModal(title, message, callback) {
+        function openConfirmModal(title, message, callback, danger = false) {
             document.getElementById('confirm-title').innerText = title;
             document.getElementById('confirm-message').innerText = message;
             confirmActionCallback = callback;
 
+            document.getElementById('btn-confirm-action').className =
+                `flex-1 py-2.5 rounded-full text-sm font-medium text-white transition-colors ${danger ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}`;
             document.getElementById('btn-confirm-action').onclick = function () {
                 if (confirmActionCallback) confirmActionCallback();
                 closeConfirmModal();
