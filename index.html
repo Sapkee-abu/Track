@@ -63,6 +63,18 @@
         .toast-show { animation: slideIn .25s ease-out forwards; }
         .toast-hide { animation: fadeOut .25s forwards; }
 
+        /* History rows: long-press to select */
+        [data-history-id] {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            transition: background-color .15s, transform .45s ease-out;
+        }
+        [data-history-id].pressing {
+            background-color: #FEF2F2;
+            transform: scale(.97);
+        }
+
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after { transition: none !important; animation: none !important; }
         }
@@ -688,7 +700,9 @@
             const dateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear() + 543} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
             const sub = `<div class="text-xs text-gray-400 mt-0.5">${dateStr}</div>`;
 
-            if (!historySelectMode) return recordRow(record, status, sub);
+            if (!historySelectMode) {
+                return recordRow(record, status, sub).replace('<button ', `<button data-history-id="${record.id}" `);
+            }
 
             const checked = selectedHistoryIds.has(record.id);
             return `
@@ -734,7 +748,7 @@
                             <button onclick="exitHistorySelectMode()" class="${BTN.soft} !py-1.5">ยกเลิก</button>
                         </div>` : `
                         <div class="flex items-center justify-between mb-3 px-1">
-                            <span class="text-xs text-gray-400">${q.trim() ? `พบ ${filtered.length} รายการ` : `ทั้งหมด ${historyRecords.length} รายการ`}</span>
+                            <span class="text-xs text-gray-400">${q.trim() ? `พบ ${filtered.length} รายการ` : `ทั้งหมด ${historyRecords.length} รายการ`} <span class="max-[400px]:hidden">· กดค้างที่รายการเพื่อเลือก</span></span>
                             <button onclick="enterHistorySelectMode()" class="flex items-center gap-1 text-sm text-red-600 bg-red-50 hover:bg-red-100 px-3.5 py-1.5 rounded-full transition-colors">${ICON.trash} ลบประวัติ</button>
                         </div>`;
 
@@ -749,9 +763,9 @@
             });
         }
 
-        function enterHistorySelectMode() {
+        function enterHistorySelectMode(preselectId = null) {
             historySelectMode = true;
-            selectedHistoryIds = new Set();
+            selectedHistoryIds = new Set(preselectId != null ? [preselectId] : []);
             document.getElementById('fab').classList.add('hidden');
             if (rerenderHistoryList) rerenderHistoryList();
         }
@@ -1276,6 +1290,73 @@
             content.classList.add('scale-95', 'opacity-0');
             setTimeout(() => modal.classList.add('hidden'), 200);
         }
+
+        // ---------- Long-press on a history row = start selecting ----------
+
+        (function setupHistoryLongPress() {
+            const page = document.getElementById('page');
+            const LONG_PRESS_MS = 500;
+            const MOVE_TOLERANCE = 10;
+
+            let timer = null;
+            let pressedRow = null;
+            let startX = 0;
+            let startY = 0;
+            let suppressNextClick = false;
+
+            function cancelPress() {
+                clearTimeout(timer);
+                timer = null;
+                if (pressedRow) pressedRow.classList.remove('pressing');
+                pressedRow = null;
+            }
+
+            page.addEventListener('pointerdown', (e) => {
+                suppressNextClick = false;
+                if (currentTab !== 'history' || historySelectMode) return;
+                if (e.pointerType === 'mouse' && e.button !== 0) return;
+                const row = e.target.closest('[data-history-id]');
+                if (!row) return;
+
+                startX = e.clientX;
+                startY = e.clientY;
+                pressedRow = row;
+                row.classList.add('pressing');
+
+                const id = Number(row.dataset.historyId);
+                timer = setTimeout(() => {
+                    timer = null;
+                    pressedRow = null;
+                    suppressNextClick = true;   // don't open the detail popup
+                    if (navigator.vibrate) navigator.vibrate(30);
+                    enterHistorySelectMode(id);
+                }, LONG_PRESS_MS);
+            });
+
+            page.addEventListener('pointermove', (e) => {
+                if (!timer) return;
+                if (Math.abs(e.clientX - startX) > MOVE_TOLERANCE || Math.abs(e.clientY - startY) > MOVE_TOLERANCE) {
+                    cancelPress();   // user is scrolling
+                }
+            });
+
+            ['pointerup', 'pointercancel', 'pointerleave'].forEach(type =>
+                page.addEventListener(type, () => { if (timer) cancelPress(); }));
+
+            // Swallow the click that follows a long press
+            page.addEventListener('click', (e) => {
+                if (suppressNextClick) {
+                    suppressNextClick = false;
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            }, true);
+
+            // Stop the phone's own long-press menu on history rows
+            page.addEventListener('contextmenu', (e) => {
+                if (e.target.closest('[data-history-id]')) e.preventDefault();
+            });
+        })();
 
         // ---------- Pull to refresh ----------
 
