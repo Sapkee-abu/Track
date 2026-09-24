@@ -5,246 +5,188 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบจัดการพัสดุหอพัก</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    fontFamily: {
-                        sans: ['Sarabun', 'Inter', 'sans-serif'],
-                    },
-                    colors: {
-                        brand: {
-                            flash: '#FFC107',
-                            jt: '#E53935',
-                            shopee: '#FF5722',
-                            post: '#D32F2F'
-                        }
-                    }
+                    fontFamily: { sans: ['Sarabun', 'system-ui', 'sans-serif'] }
                 }
             }
         }
     </script>
     <style>
+        :root { --bg: #F3F5F9; }
         body {
-            background-color: #f3f4f6;
+            background-color: var(--bg);
             -webkit-tap-highlight-color: transparent;
         }
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 10px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d5dbe5; border-radius: 10px; }
+        .hide-scroll { scrollbar-width: none; }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+
+        /* Soft card used for every list group */
+        .card {
+            background: #fff;
+            border-radius: 24px;
+            box-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 6px 20px rgba(16, 24, 40, .04);
         }
 
-        .tab-active {
-            border-bottom: 3px solid #3b82f6;
-            color: #3b82f6;
-            font-weight: 600;
+        /* Soft rounded form fields */
+        .field {
+            width: 100%;
+            background: #F3F5F9;
+            border: 1px solid transparent;
+            border-radius: 16px;
+            padding: 12px 16px;
+            font-size: 15px;
+            outline: none;
+            transition: background .15s, border-color .15s, box-shadow .15s;
         }
-
-        .modal-enter {
-            opacity: 0;
-            transform: scale(0.95);
+        .field:focus {
+            background: #fff;
+            border-color: #bfd3fb;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, .12);
         }
-        .modal-enter-active {
-            opacity: 1;
-            transform: scale(1);
-            transition: opacity 200ms ease-out, transform 200ms ease-out;
-        }
+        .field-white { background: #fff; }
 
         @keyframes slideIn {
-            from { transform: translateY(100%); opacity: 0; }
+            from { transform: translateY(-8px); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
         }
         @keyframes fadeOut {
             from { opacity: 1; }
             to { opacity: 0; }
         }
-        .toast-show {
-            animation: slideIn 0.3s forwards;
-        }
-        .toast-hide {
-            animation: fadeOut 0.3s forwards;
+        .toast-show { animation: slideIn .25s ease-out forwards; }
+        .toast-hide { animation: fadeOut .25s forwards; }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { transition: none !important; animation: none !important; }
         }
     </style>
 </head>
 <body class="text-gray-800 antialiased h-screen flex flex-col overflow-hidden">
 
-    <header class="bg-white shadow-sm z-10 relative">
-        <div class="px-4 py-3 flex justify-between items-center bg-blue-600 text-white">
-            <div class="flex items-center gap-1">
-                <button onclick="toggleMobileMenu()" id="hamburger-btn" class="hidden max-[850px]:flex items-center justify-center p-2 -ml-2 rounded-full hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-white/50" title="เมนู">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
+    <header class="bg-white/90 backdrop-blur z-10 relative shadow-[0_1px_0_rgba(16,24,40,.05)]">
+        <div class="max-w-3xl mx-auto w-full px-4 pt-3 pb-2 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <button onclick="toggleMobileMenu()" id="hamburger-btn" class="hidden max-[850px]:flex w-10 h-10 -ml-1 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-200" title="เมนู" aria-label="เมนู">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h16M4 12h16M4 17h10" /></svg>
                 </button>
-                <h1 class="text-lg font-bold">📦 ระบบจัดการพัสดุหอพัก</h1>
+                <div class="w-9 h-9 rounded-2xl bg-blue-50 flex items-center justify-center text-lg">📦</div>
+                <h1 class="text-base font-semibold text-gray-800">พัสดุหอพัก</h1>
             </div>
-            <button onclick="refreshData()" id="refresh-btn" class="p-2 rounded-full hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-white/50" title="รีเฟรชข้อมูล">
-                <svg xmlns="http://www.w3.org/2000/svg" id="refresh-icon" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
+            <button onclick="refreshData()" id="refresh-btn" class="w-10 h-10 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-200" title="รีเฟรชข้อมูล" aria-label="รีเฟรชข้อมูล">
+                <svg xmlns="http://www.w3.org/2000/svg" id="refresh-icon" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
             </button>
         </div>
-        <div class="max-[850px]:hidden flex overflow-x-auto hide-scroll px-2" id="tabs-container">
-            <button onclick="switchTab('all')" id="tab-all" class="flex-shrink-0 px-4 py-3 text-sm text-gray-500 hover:text-blue-600 focus:outline-none whitespace-nowrap">
-                📋 ทั้งหมด
-            </button>
-            <button onclick="switchTab('flash')" id="tab-flash" class="flex-shrink-0 px-4 py-3 text-sm text-gray-500 hover:text-blue-600 focus:outline-none whitespace-nowrap tab-active">
-                ⚡ Flash Express
-            </button>
-            <button onclick="switchTab('jt')" id="tab-jt" class="flex-shrink-0 px-4 py-3 text-sm text-gray-500 hover:text-blue-600 focus:outline-none whitespace-nowrap">
-                🔴 J&T Express
-            </button>
-            <button onclick="switchTab('shopee')" id="tab-shopee" class="flex-shrink-0 px-4 py-3 text-sm text-gray-500 hover:text-blue-600 focus:outline-none whitespace-nowrap">
-                🟠 Shopee Express
-            </button>
-            <button onclick="switchTab('post')" id="tab-post" class="flex-shrink-0 px-4 py-3 text-sm text-gray-500 hover:text-blue-600 focus:outline-none whitespace-nowrap">
-                📮 ไปรษณีย์ไทย
-            </button>
-            <button onclick="switchTab('pending')" id="tab-pending" class="flex-shrink-0 px-4 py-3 text-sm text-gray-500 hover:text-blue-600 focus:outline-none whitespace-nowrap">
-                📦 รอส่งของ
-            </button>
-            <button onclick="switchTab('history')" id="tab-history" class="flex-shrink-0 px-4 py-3 text-sm text-gray-500 hover:text-blue-600 focus:outline-none whitespace-nowrap">
-                🕒 ประวัติ
-            </button>
-            <button onclick="switchTab('summary')" id="tab-summary" class="flex-shrink-0 px-4 py-3 text-sm text-gray-500 hover:text-blue-600 focus:outline-none whitespace-nowrap">
-                💰 สรุปยอด
-            </button>
-        </div>
-        <div id="mobile-menu" class="hidden absolute top-full left-0 right-0 bg-white border-t border-gray-100 shadow-lg z-30 flex-col"></div>
+        <!-- Pill tabs (desktop); built from TABS in JS -->
+        <nav id="tabs-container" class="max-[850px]:hidden max-w-3xl mx-auto w-full flex gap-1.5 overflow-x-auto hide-scroll px-4 pb-3"></nav>
+        <!-- Mobile dropdown menu -->
+        <div id="mobile-menu" class="hidden absolute top-full left-3 right-3 mt-2 bg-white rounded-3xl shadow-xl p-2 z-30 flex-col gap-0.5"></div>
     </header>
 
     <div id="pull-refresh-indicator" class="hidden fixed left-1/2 -translate-x-1/2 z-40 bg-white rounded-full shadow-md p-2" style="top: 8px; opacity: 0; transition: opacity 0.15s;">
-        <svg id="pull-refresh-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-        </svg>
+        <svg id="pull-refresh-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
     </div>
 
-    <main class="flex-1 overflow-y-auto p-4 relative" id="main-content">
+    <main class="flex-1 overflow-y-auto relative" id="main-content">
+        <div id="page" class="max-w-3xl mx-auto px-4 pt-4 pb-28"></div>
     </main>
 
-    <button onclick="openFormModal()" class="fixed bottom-6 right-6 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 hover:shadow-xl transition-all duration-200 z-20 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center justify-center">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-        </svg>
+    <!-- Floating add button -->
+    <button onclick="openFormModal()" class="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg shadow-blue-600/30 hover:bg-blue-700 transition-colors z-20 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-200 flex items-center justify-center" aria-label="เพิ่มข้อมูลพัสดุ">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 5v14m7-7H5" /></svg>
     </button>
 
-    <div id="detail-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden transform scale-95 opacity-0 transition-all duration-200" id="detail-modal-content">
-            <div class="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
-                <h3 class="text-lg font-bold text-gray-800">รายละเอียดพัสดุ</h3>
-                <button onclick="closeDetailModal()" class="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+    <!-- Detail modal -->
+    <div id="detail-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-gray-900/30 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-[28px] shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden transform scale-95 opacity-0 transition-all duration-200" id="detail-modal-content">
+            <div class="px-5 pt-4 pb-1 flex justify-between items-center">
+                <h3 class="text-sm font-medium text-gray-400">รายละเอียดพัสดุ</h3>
+                <button onclick="closeDetailModal()" class="w-9 h-9 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors" aria-label="ปิด">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
             </div>
-
-            <div class="p-6 overflow-y-auto flex-1" id="detail-modal-body">
-            </div>
-
-            <div class="px-6 py-4 border-t bg-gray-50 flex flex-wrap gap-2 justify-end" id="detail-modal-actions">
-            </div>
+            <div class="px-5 pb-4 overflow-y-auto flex-1" id="detail-modal-body"></div>
+            <div class="px-5 py-4 flex flex-wrap gap-2 justify-end border-t border-gray-100" id="detail-modal-actions"></div>
         </div>
     </div>
 
-    <div id="form-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[95vh] flex flex-col overflow-hidden transform scale-95 opacity-0 transition-all duration-200" id="form-modal-content">
-            <div class="px-6 py-4 border-b flex justify-between items-center bg-blue-50">
-                <h3 class="text-lg font-bold text-blue-800" id="form-modal-title">เพิ่มข้อมูลพัสดุ</h3>
-                <button onclick="closeFormModal()" class="text-gray-500 hover:text-gray-800 p-1 rounded-full hover:bg-blue-100 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+    <!-- Form modal -->
+    <div id="form-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-gray-900/30 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-[28px] shadow-2xl w-full max-w-lg max-h-[95vh] flex flex-col overflow-hidden transform scale-95 opacity-0 transition-all duration-200" id="form-modal-content">
+            <div class="px-6 pt-5 pb-2 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-800" id="form-modal-title">เพิ่มข้อมูลพัสดุ</h3>
+                <button onclick="closeFormModal()" class="w-9 h-9 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors" aria-label="ปิด">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
             </div>
 
-            <div class="p-6 overflow-y-auto flex-1" id="form-scroll-area">
+            <div class="px-6 py-3 overflow-y-auto flex-1" id="form-scroll-area">
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อ-นามสกุล</label>
-                        <input type="text" id="input-name" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" placeholder="กรอกชื่อ นามสกุล">
-                    </div>
-
-                    <!-- LINE link (NEW) -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">ลิงก์ไลน์ <span class="text-gray-400 font-normal">(ถ้ามี)</span></label>
-                        <input type="url" id="input-line" inputmode="url" autocapitalize="off" autocorrect="off" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all" placeholder="เช่น https://line.me/ti/p/xxxxxxx">
+                        <label for="input-name" class="block text-sm text-gray-500 mb-1.5 ml-1">ชื่อ-นามสกุล</label>
+                        <input type="text" id="input-name" class="field" placeholder="กรอกชื่อ นามสกุล">
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">เลขหอพัก</label>
-                        <select id="input-room" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white">
-                        </select>
+                        <label for="input-line" class="block text-sm text-gray-500 mb-1.5 ml-1">ชื่อไลน์ <span class="text-gray-400">(ถ้ามี)</span></label>
+                        <input type="text" id="input-line" maxlength="100" autocapitalize="off" autocorrect="off" class="field" placeholder="กรอกชื่อไลน์">
                     </div>
 
-                    <hr class="border-gray-200 my-4">
-
                     <div>
+                        <label for="input-room" class="block text-sm text-gray-500 mb-1.5 ml-1">เลขหอพัก</label>
+                        <select id="input-room" class="field"></select>
+                    </div>
+
+                    <div class="pt-2">
                         <div class="flex justify-between items-center mb-3">
-                            <label class="block text-sm font-medium text-gray-700">รายการพัสดุ</label>
-                            <button type="button" onclick="addFormItem()" class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium hover:bg-blue-200 transition-colors flex items-center gap-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                                </svg>
+                            <span class="text-sm text-gray-500 ml-1">รายการพัสดุ</span>
+                            <button type="button" onclick="addFormItem()" class="text-sm bg-blue-50 text-blue-700 pl-2.5 pr-3.5 py-1.5 rounded-full font-medium hover:bg-blue-100 transition-colors flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m7-7H5" /></svg>
                                 เพิ่มของ
                             </button>
                         </div>
-
-                        <div id="form-items-container" class="space-y-3">
-                        </div>
+                        <div id="form-items-container" class="space-y-3"></div>
                     </div>
                 </div>
             </div>
 
-            <div class="px-6 py-4 border-t bg-gray-50 flex gap-3 justify-end">
-                <button type="button" onclick="closeFormModal()" class="px-4 py-2 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 font-medium transition-colors">ยกเลิก</button>
-                <button type="button" onclick="saveRecord()" class="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 font-medium shadow-sm transition-colors flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                    </svg>
-                    บันทึกข้อมูล
-                </button>
+            <div class="px-6 py-4 flex gap-2 justify-end border-t border-gray-100">
+                <button type="button" onclick="closeFormModal()" class="px-5 py-2.5 rounded-full text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors">ยกเลิก</button>
+                <button type="button" onclick="saveRecord()" class="px-5 py-2.5 rounded-full text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors">บันทึกข้อมูล</button>
             </div>
         </div>
     </div>
 
-    <div id="confirm-modal" class="fixed inset-0 z-[70] hidden flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm flex flex-col overflow-hidden transform scale-95 opacity-0 transition-all duration-200" id="confirm-modal-content">
-            <div class="p-6 text-center">
-                <div class="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                </div>
-                <h3 class="text-xl font-bold text-gray-800 mb-2" id="confirm-title">ยืนยันการทำรายการ?</h3>
-                <p class="text-gray-500 text-sm mb-4" id="confirm-message">คุณต้องการดำเนินการนี้ใช่หรือไม่?</p>
+    <!-- Confirm modal -->
+    <div id="confirm-modal" class="fixed inset-0 z-[70] hidden flex items-center justify-center bg-gray-900/30 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-[28px] shadow-2xl w-full max-w-sm overflow-hidden transform scale-95 opacity-0 transition-all duration-200" id="confirm-modal-content">
+            <div class="px-6 pt-7 pb-5 text-center">
+                <h3 class="text-lg font-semibold text-gray-800 mb-1.5" id="confirm-title">ยืนยันการทำรายการ?</h3>
+                <p class="text-gray-500 text-sm" id="confirm-message">คุณต้องการดำเนินการนี้ใช่หรือไม่?</p>
             </div>
-            <div class="bg-gray-50 px-6 py-4 flex gap-3 justify-center border-t border-gray-100">
-                <button type="button" onclick="closeConfirmModal()" class="px-5 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 font-medium transition-colors w-1/2">ยกเลิก</button>
-                <button type="button" id="btn-confirm-action" class="px-5 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 font-medium shadow-sm transition-colors w-1/2">ยืนยัน</button>
+            <div class="px-5 pb-5 flex gap-2">
+                <button type="button" onclick="closeConfirmModal()" class="flex-1 py-2.5 rounded-full text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors">ยกเลิก</button>
+                <button type="button" id="btn-confirm-action" class="flex-1 py-2.5 rounded-full text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors">ยืนยัน</button>
             </div>
         </div>
     </div>
 
-    <div id="toast-container" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] flex flex-col gap-2 pointer-events-none"></div>
+    <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-[80] flex flex-col items-center gap-2 pointer-events-none"></div>
 
     <script src="config.js"></script>
     <script>
         const DORM_ROOMS = ['1', '2', '3', '4', '5', '7', '13', '14', '15', '16', '17', '18', 'เรสA', 'เรสB', 'เรสC', 'เรสC2'];
         const TRANSPORTS = [
-            { id: 'flash', name: 'Flash Express', colorClass: 'text-yellow-600', bgClass: 'bg-yellow-50', badgeClass: 'bg-yellow-100 text-yellow-800', icon: '⚡' },
-            { id: 'jt', name: 'J&T Express', colorClass: 'text-red-600', bgClass: 'bg-red-50', badgeClass: 'bg-red-100 text-red-800', icon: '🔴' },
-            { id: 'shopee', name: 'Shopee Express', colorClass: 'text-orange-600', bgClass: 'bg-orange-50', badgeClass: 'bg-orange-100 text-orange-800', icon: '🟠' },
-            { id: 'post', name: 'ไปรษณีย์ไทย', colorClass: 'text-red-700', bgClass: 'bg-red-50', badgeClass: 'bg-red-100 text-red-800', icon: '📮' }
+            { id: 'flash', name: 'Flash Express', colorClass: 'text-yellow-700', badgeClass: 'bg-yellow-100 text-yellow-800', icon: '⚡' },
+            { id: 'jt', name: 'J&T Express', colorClass: 'text-red-600', badgeClass: 'bg-red-100 text-red-700', icon: '🔴' },
+            { id: 'shopee', name: 'Shopee Express', colorClass: 'text-orange-600', badgeClass: 'bg-orange-100 text-orange-700', icon: '🟠' },
+            { id: 'post', name: 'ไปรษณีย์ไทย', colorClass: 'text-red-700', badgeClass: 'bg-red-100 text-red-700', icon: '📮' }
         ];
 
         const TABS = [
@@ -264,6 +206,24 @@
             'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
         ];
 
+        const ICON = {
+            chevron: '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>',
+            check: '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>',
+            copy: '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="9" y="9" width="11" height="11" rx="3" stroke-width="2"/><path stroke-linecap="round" stroke-width="2" d="M15 9V7a3 3 0 00-3-3H7a3 3 0 00-3 3v5a3 3 0 003 3h2"/></svg>',
+            search: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="11" cy="11" r="7" stroke-width="2"/><path stroke-linecap="round" stroke-width="2" d="M20 20l-3.5-3.5"/></svg>',
+            close: '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>',
+            trash: '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>'
+        };
+
+        const BTN = {
+            primary: 'px-5 py-2.5 rounded-full text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors',
+            amber: 'px-5 py-2.5 rounded-full text-sm font-medium text-white bg-amber-500 hover:bg-amber-600 transition-colors',
+            green: 'px-5 py-2.5 rounded-full text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition-colors',
+            soft: 'px-4 py-2.5 rounded-full text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors',
+            softBlue: 'px-4 py-2.5 rounded-full text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors',
+            softRed: 'px-4 py-2.5 rounded-full text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors'
+        };
+
         function getItemFee(transportId) {
             return transportId === 'post' ? 15 : 8;
         }
@@ -274,14 +234,12 @@
         let currentTab = 'flash';
         let currentEditingId = null;
         let mobileMenuOpen = false;
-        let formData = {
-            name: '',
-            lineLink: '',
-            room: DORM_ROOMS[0],
-            items: []
-        };
+        let formData = { name: '', lineName: '', room: DORM_ROOMS[0], items: [] };
 
-        // ---------- Helpers (NEW) ----------
+        // Search text per tab, kept while switching tabs / refreshing
+        const searchQueries = { pending: '', history: '' };
+
+        // ---------- Helpers ----------
 
         function escapeHtml(str) {
             return String(str ?? '')
@@ -292,18 +250,113 @@
                 .replace(/'/g, '&#39;');
         }
 
-        // Normalizes a LINE link: adds https:// if missing and only allows http/https
-        // (blocks things like javascript: links). Returns '' if invalid.
-        function normalizeLink(raw) {
-            const value = String(raw || '').trim();
-            if (!value) return '';
-            const withScheme = /^https?:\/\//i.test(value) ? value : `https://${value}`;
-            try {
-                const url = new URL(withScheme);
-                return (url.protocol === 'http:' || url.protocol === 'https:') ? url.href : '';
-            } catch {
-                return '';
-            }
+        function getTransportData(transportId) {
+            return TRANSPORTS.find(t => t.id === transportId);
+        }
+
+        function groupByRoom(list) {
+            const grouped = {};
+            list.forEach(record => {
+                if (!grouped[record.room]) grouped[record.room] = [];
+                grouped[record.room].push(record);
+            });
+            return grouped;
+        }
+
+        // Matches name, LINE name, room and tracking numbers.
+        // Several words = all must match (e.g. "หอ 5 สมชาย").
+        function matchesQuery(record, query) {
+            const q = query.trim().toLowerCase();
+            if (!q) return true;
+            const haystack = [
+                record.name,
+                record.lineName,
+                `หอ ${record.room}`,
+                `หอพัก ${record.room}`,
+                ...record.items.map(i => i.tracking)
+            ].join(' ').toLowerCase();
+            return q.split(/\s+/).every(word => haystack.includes(word));
+        }
+
+        function countBadge(text, cls = 'bg-gray-100 text-gray-500') {
+            return `<span class="text-xs px-2.5 py-1 rounded-full ${cls}">${text}</span>`;
+        }
+
+        function emptyState(emoji, text) {
+            return `
+                <div class="flex flex-col items-center text-center text-gray-400 py-16">
+                    <div class="w-16 h-16 rounded-full bg-white shadow-sm flex items-center justify-center text-2xl mb-3">${emoji}</div>
+                    <p class="text-base">${text}</p>
+                </div>`;
+        }
+
+        function recordRow(record, rightHtml, subHtml = '', hover = 'hover:bg-gray-50') {
+            return `
+                <button onclick="openDetailModal(${record.id})" class="w-full text-left px-3 py-3 rounded-2xl ${hover} transition-colors flex justify-between items-center gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-200">
+                    <div class="min-w-0">
+                        <div class="font-medium text-gray-800 truncate">${escapeHtml(record.name)}</div>
+                        ${subHtml}
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0">${rightHtml}${ICON.chevron}</div>
+                </button>`;
+        }
+
+        function roomCards(list, rowFn, tone = 'blue') {
+            const grouped = groupByRoom(list);
+            const chip = tone === 'amber' ? 'bg-amber-100 text-amber-800' : 'bg-blue-50 text-blue-700';
+            return '<div class="space-y-4">' + DORM_ROOMS
+                .filter(room => grouped[room] && grouped[room].length > 0)
+                .map(room => `
+                    <section class="card p-2">
+                        <div class="flex items-center justify-between px-3 pt-2 pb-1.5">
+                            <span class="text-sm font-semibold px-3 py-1 rounded-full ${chip}">หอพัก ${escapeHtml(room)}</span>
+                            <span class="text-xs text-gray-400">${grouped[room].length} คน</span>
+                        </div>
+                        <div class="space-y-0.5">${grouped[room].map(rowFn).join('')}</div>
+                    </section>
+                `).join('') + '</div>';
+        }
+
+        // Search box shown at the top of a tab. Only the list below it is
+        // re-rendered while typing, so the input keeps focus (works with Thai IME).
+        function renderSearchableTab(container, tabId, placeholder, renderList) {
+            const q = searchQueries[tabId] || '';
+            container.innerHTML = `
+                <div class="sticky top-0 z-[5] -mx-4 px-4 pt-1 pb-3" style="background: var(--bg);">
+                    <div class="relative">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">${ICON.search}</span>
+                        <input id="search-input" type="text" enterkeyhint="search" autocomplete="off"
+                               value="${escapeHtml(q)}" placeholder="${escapeHtml(placeholder)}"
+                               class="w-full bg-white rounded-full pl-12 pr-11 py-3 text-[15px] shadow-[0_1px_2px_rgba(16,24,40,.05)] outline-none border border-transparent focus:border-blue-200 focus:ring-4 focus:ring-blue-100 transition">
+                        <button id="search-clear" type="button" aria-label="ล้างคำค้นหา"
+                                class="${q ? '' : 'hidden'} absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">${ICON.close}</button>
+                    </div>
+                </div>
+                <div id="list-area"></div>`;
+
+            const input = container.querySelector('#search-input');
+            const clearBtn = container.querySelector('#search-clear');
+            const listArea = container.querySelector('#list-area');
+
+            input.addEventListener('input', () => {
+                searchQueries[tabId] = input.value;
+                clearBtn.classList.toggle('hidden', !input.value);
+                renderList(listArea, input.value);
+            });
+            clearBtn.addEventListener('click', () => {
+                input.value = '';
+                searchQueries[tabId] = '';
+                clearBtn.classList.add('hidden');
+                renderList(listArea, '');
+                input.focus();
+            });
+
+            renderList(listArea, q);
+        }
+
+        function searchResultInfo(count, query) {
+            if (!query.trim()) return '';
+            return `<p class="text-xs text-gray-400 mb-3 ml-2">พบ ${count} รายการ</p>`;
         }
 
         // ---------- Server sync ----------
@@ -342,13 +395,7 @@
             return res.json();
         }
 
-        // FIX: instead of sending the WHOLE records array (which overwrote
-        // other devices' changes with this device's stale copy), each change
-        // now sends only the ONE record that changed.
-        //
-        // UI still updates instantly (optimistic); the server reply replaces
-        // the local copy. On failure we reload from the server so the screen
-        // never shows data that wasn't saved.
+        // Sends only the ONE record that changed, so devices don't overwrite each other.
         function syncRecord(requestPromise) {
             renderApp();
             return requestPromise
@@ -373,22 +420,27 @@
             return syncRecord(apiRequest('PATCH', `/api/records/${id}`, fields));
         }
 
-        // ---------- App ----------
+        // ---------- App shell ----------
 
         async function initApp() {
             await loadData();
 
-            const roomSelect = document.getElementById('input-room');
-            roomSelect.innerHTML = DORM_ROOMS.map(room => `<option value="${room}">${room}</option>`).join('');
+            document.getElementById('input-room').innerHTML =
+                DORM_ROOMS.map(room => `<option value="${room}">${room}</option>`).join('');
 
-            renderMobileMenu();
+            renderTabs();
             renderApp();
         }
 
-        function renderMobileMenu() {
-            const menu = document.getElementById('mobile-menu');
-            menu.innerHTML = TABS.map(tab => `
-                <button onclick="switchTab('${tab.id}')" id="mobile-tab-${tab.id}" class="w-full text-left px-4 py-3 text-sm text-gray-600 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 focus:outline-none">
+        function renderTabs() {
+            document.getElementById('tabs-container').innerHTML = TABS.map(tab => `
+                <button onclick="switchTab('${tab.id}')" class="flex-shrink-0 px-4 py-2 rounded-full text-sm whitespace-nowrap transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 ${tab.id === currentTab ? 'bg-blue-600 text-white font-medium' : 'text-gray-500 hover:bg-gray-100'}">
+                    ${tab.icon} ${tab.label}
+                </button>
+            `).join('');
+
+            document.getElementById('mobile-menu').innerHTML = TABS.map(tab => `
+                <button onclick="switchTab('${tab.id}')" class="w-full text-left px-4 py-3 rounded-2xl text-sm transition-colors focus:outline-none ${tab.id === currentTab ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-600 hover:bg-gray-50'}">
                     ${tab.icon} ${tab.label}
                 </button>
             `).join('');
@@ -410,46 +462,23 @@
 
         function switchTab(tabId) {
             currentTab = tabId;
-
-            document.querySelectorAll('#tabs-container button').forEach(btn => {
-                btn.classList.remove('tab-active');
-                btn.classList.add('text-gray-500');
-            });
-            const activeTab = document.getElementById(`tab-${tabId}`);
-            if (activeTab) {
-                activeTab.classList.add('tab-active');
-                activeTab.classList.remove('text-gray-500');
-            }
-
-            document.querySelectorAll('#mobile-menu button').forEach(btn => {
-                btn.classList.remove('bg-blue-50', 'text-blue-700', 'font-semibold');
-                btn.classList.add('text-gray-600');
-            });
-            const activeMobileTab = document.getElementById(`mobile-tab-${tabId}`);
-            if (activeMobileTab) {
-                activeMobileTab.classList.add('bg-blue-50', 'text-blue-700', 'font-semibold');
-                activeMobileTab.classList.remove('text-gray-600');
-            }
-
+            renderTabs();
             closeMobileMenu();
+            document.getElementById('main-content').scrollTop = 0;
             renderApp();
         }
 
         function renderApp() {
-            const mainContent = document.getElementById('main-content');
+            const page = document.getElementById('page');
 
-            if (currentTab === 'all') {
-                renderAllTab(mainContent);
-            } else if (currentTab === 'history') {
-                renderHistory(mainContent);
-            } else if (currentTab === 'pending') {
-                renderPending(mainContent);
-            } else if (currentTab === 'summary') {
-                renderSummaryTab(mainContent);
-            } else {
-                renderTransportTab(mainContent, currentTab);
-            }
+            if (currentTab === 'all') renderAllTab(page);
+            else if (currentTab === 'history') renderHistory(page);
+            else if (currentTab === 'pending') renderPending(page);
+            else if (currentTab === 'summary') renderSummaryTab(page);
+            else renderTransportTab(page, currentTab);
         }
+
+        // ---------- Tabs ----------
 
         function renderSummaryTab(container) {
             const completedRecords = records.filter(r => r.status === 'completed');
@@ -458,17 +487,13 @@
             completedRecords.forEach(record => {
                 const d = new Date(record.updatedAt);
                 const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-                if (!dayMap[key]) {
-                    dayMap[key] = { dateObj: d, totalItems: 0, totalRevenue: 0, byTransport: {} };
-                }
+                if (!dayMap[key]) dayMap[key] = { dateObj: d, totalItems: 0, totalRevenue: 0, byTransport: {} };
                 const day = dayMap[key];
                 record.items.forEach(item => {
                     const fee = getItemFee(item.transport);
                     day.totalItems += 1;
                     day.totalRevenue += fee;
-                    if (!day.byTransport[item.transport]) {
-                        day.byTransport[item.transport] = { count: 0, revenue: 0 };
-                    }
+                    if (!day.byTransport[item.transport]) day.byTransport[item.transport] = { count: 0, revenue: 0 };
                     day.byTransport[item.transport].count += 1;
                     day.byTransport[item.transport].revenue += fee;
                 });
@@ -477,13 +502,7 @@
             const days = Object.values(dayMap).sort((a, b) => b.dateObj - a.dateObj);
 
             if (days.length === 0) {
-                container.innerHTML = `
-                    <div class="flex flex-col items-center justify-center h-full text-gray-400 mt-10">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 8h6m-5 4h4m-2-8a9 9 0 110 18 9 9 0 010-18z" />
-                        </svg>
-                        <p class="text-lg">ยังไม่มีพัสดุที่ส่งสำเร็จ</p>
-                    </div>`;
+                container.innerHTML = emptyState('💰', 'ยังไม่มีพัสดุที่ส่งสำเร็จ');
                 return;
             }
 
@@ -491,11 +510,11 @@
             const grandTotalItems = days.reduce((sum, d) => sum + d.totalItems, 0);
 
             let html = `
-                <div class="space-y-6 pb-20">
-                    <div class="bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-xl shadow-sm p-5">
-                        <p class="text-sm text-blue-100">ยอดรวมทั้งหมด (ส่งสำเร็จ)</p>
-                        <p class="text-3xl font-bold mt-1">${grandTotalRevenue.toLocaleString()} บาท</p>
-                        <p class="text-sm text-blue-100 mt-1">${grandTotalItems.toLocaleString()} ชิ้น</p>
+                <div class="space-y-4">
+                    <div class="card px-6 py-5">
+                        <p class="text-sm text-gray-400">ยอดรวมที่ส่งสำเร็จ</p>
+                        <p class="text-3xl font-semibold text-gray-900 mt-1">${grandTotalRevenue.toLocaleString()} <span class="text-lg font-normal text-gray-400">บาท</span></p>
+                        <p class="text-sm text-gray-500 mt-1">${grandTotalItems.toLocaleString()} ชิ้น</p>
                     </div>
             `;
 
@@ -508,29 +527,25 @@
                     .map(t => {
                         const data = day.byTransport[t.id];
                         return `
-                            <div class="grid grid-cols-3 items-center text-sm py-1.5">
-                                <span class="flex items-center gap-1.5 text-gray-600">${t.icon} ${t.name}</span>
-                                <span class="text-gray-500 text-center">${data.count} ชิ้น × ${getItemFee(t.id)} บาท</span>
-                                <span class="font-semibold text-gray-800 text-right">${data.revenue.toLocaleString()} บาท</span>
-                            </div>
-                        `;
+                            <div class="grid grid-cols-3 items-center text-sm px-3 py-2">
+                                <span class="text-gray-600">${t.icon} ${t.name}</span>
+                                <span class="text-gray-400 text-center">${data.count} × ${getItemFee(t.id)}</span>
+                                <span class="font-medium text-gray-800 text-right">${data.revenue.toLocaleString()} บาท</span>
+                            </div>`;
                     }).join('');
 
                 html += `
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                        <div class="bg-gray-50 px-4 py-3 border-b border-gray-100 flex justify-between items-center">
-                            <span class="font-semibold text-gray-700">${dateStr}</span>
-                            <span class="text-lg font-bold text-blue-600">${day.totalRevenue.toLocaleString()} บาท</span>
+                    <section class="card p-2">
+                        <div class="flex justify-between items-center px-3 pt-2 pb-1">
+                            <span class="font-medium text-gray-700">${dateStr}</span>
+                            <span class="font-semibold text-blue-600">${day.totalRevenue.toLocaleString()} บาท</span>
                         </div>
-                        <div class="px-4 py-2 divide-y divide-gray-50">
-                            ${transportRows}
+                        ${transportRows}
+                        <div class="mx-1 mt-1 px-3 py-2 rounded-2xl bg-gray-50 flex justify-between text-sm text-gray-500">
+                            <span>รวม ${day.totalItems} ชิ้น</span>
+                            <span>${day.totalRevenue.toLocaleString()} บาท</span>
                         </div>
-                        <div class="px-4 py-2 bg-gray-50 border-t border-gray-100 flex justify-between items-center text-sm">
-                            <span class="text-gray-500">รวม ${day.totalItems} ชิ้น</span>
-                            <span class="font-semibold text-gray-700">${day.totalRevenue.toLocaleString()} บาท</span>
-                        </div>
-                    </div>
-                `;
+                    </section>`;
             });
 
             html += '</div>';
@@ -539,132 +554,16 @@
 
         function renderAllTab(container) {
             const activeRecords = records.filter(r => r.status === 'active');
-
-            const grouped = {};
-            activeRecords.forEach(record => {
-                if (!grouped[record.room]) grouped[record.room] = [];
-                grouped[record.room].push(record);
-            });
-
-            if (Object.keys(grouped).length === 0) {
-                container.innerHTML = `
-                    <div class="flex flex-col items-center justify-center h-full text-gray-400 mt-10">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                        </svg>
-                        <p class="text-lg">ไม่มีพัสดุที่กำลังดำเนินการ</p>
-                    </div>`;
+            if (activeRecords.length === 0) {
+                container.innerHTML = emptyState('📭', 'ไม่มีพัสดุที่กำลังดำเนินการ');
                 return;
             }
-
-            let html = '<div class="space-y-6 pb-20">';
-
-            DORM_ROOMS.forEach(room => {
-                if (grouped[room] && grouped[room].length > 0) {
-                    html += `
-                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                            <div class="bg-gray-50 px-4 py-2 border-b border-gray-100 font-semibold text-gray-700 flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                </svg>
-                                หอพัก ${room}
-                                <span class="ml-auto bg-gray-200 text-gray-600 text-xs px-2 py-1 rounded-full">${grouped[room].length} คน</span>
-                            </div>
-                            <div class="divide-y divide-gray-100">
-                    `;
-
-                    grouped[room].forEach(record => {
-                        const activeItemsCount = record.items.filter(i => !i.isCompleted).length;
-                        const transportIcons = [...new Set(record.items.filter(i => !i.isCompleted).map(i => i.transport))]
-                            .map(id => getTransportData(id)?.icon || '')
-                            .join(' ');
-
-                        html += `
-                            <button onclick="openDetailModal(${record.id})" class="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex justify-between items-center group focus:outline-none focus:bg-blue-50">
-                                <span class="font-medium text-gray-800 group-hover:text-blue-700 transition-colors">${escapeHtml(record.name)}</span>
-                                <div class="flex items-center gap-2">
-                                    <span class="text-sm">${transportIcons}</span>
-                                    <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full group-hover:bg-blue-100 group-hover:text-blue-700 transition-colors">${activeItemsCount} ชิ้น</span>
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-300 group-hover:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                    </svg>
-                                </div>
-                            </button>
-                        `;
-                    });
-
-                    html += `
-                            </div>
-                        </div>
-                    `;
-                }
+            container.innerHTML = roomCards(activeRecords, record => {
+                const remaining = record.items.filter(i => !i.isCompleted);
+                const icons = [...new Set(remaining.map(i => i.transport))]
+                    .map(id => getTransportData(id)?.icon || '').join(' ');
+                return recordRow(record, `<span class="text-sm">${icons}</span>${countBadge(`${remaining.length} ชิ้น`)}`);
             });
-
-            html += '</div>';
-            container.innerHTML = html;
-        }
-
-        function renderPending(container) {
-            const pendingRecords = records.filter(r => r.status === 'pending');
-
-            const grouped = {};
-            pendingRecords.forEach(record => {
-                if (!grouped[record.room]) grouped[record.room] = [];
-                grouped[record.room].push(record);
-            });
-
-            if (Object.keys(grouped).length === 0) {
-                container.innerHTML = `
-                    <div class="flex flex-col items-center justify-center h-full text-gray-400 mt-10">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                        </svg>
-                        <p class="text-lg">ไม่มีพัสดุที่รอส่ง</p>
-                    </div>`;
-                return;
-            }
-
-            let html = '<div class="space-y-6 pb-20">';
-
-            DORM_ROOMS.forEach(room => {
-                if (grouped[room] && grouped[room].length > 0) {
-                    html += `
-                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                            <div class="bg-yellow-50 px-4 py-2 border-b border-yellow-100 font-semibold text-yellow-800 flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                                </svg>
-                                หอพัก ${room}
-                                <span class="ml-auto bg-yellow-200 text-yellow-800 text-xs px-2 py-1 rounded-full">${grouped[room].length} คน</span>
-                            </div>
-                            <div class="divide-y divide-gray-100">
-                    `;
-
-                    grouped[room].forEach(record => {
-                        const totalItems = record.items.length;
-
-                        html += `
-                            <button onclick="openDetailModal(${record.id})" class="w-full text-left px-4 py-3 hover:bg-yellow-50 transition-colors flex justify-between items-center group focus:outline-none focus:bg-yellow-50">
-                                <span class="font-medium text-gray-800 group-hover:text-yellow-700 transition-colors">${escapeHtml(record.name)}</span>
-                                <div class="flex items-center gap-2">
-                                    <span class="text-xs text-yellow-700 bg-yellow-100 px-2 py-1 rounded-full group-hover:bg-yellow-200 transition-colors">ครบ ${totalItems} ชิ้น</span>
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-300 group-hover:text-yellow-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                    </svg>
-                                </div>
-                            </button>
-                        `;
-                    });
-
-                    html += `
-                            </div>
-                        </div>
-                    `;
-                }
-            });
-
-            html += '</div>';
-            container.innerHTML = html;
         }
 
         function renderTransportTab(container, transportId) {
@@ -672,141 +571,84 @@
                 r.status === 'active' &&
                 r.items.some(item => item.transport === transportId && !item.isCompleted)
             );
-
-            const grouped = {};
-            activeRecords.forEach(record => {
-                if (!grouped[record.room]) grouped[record.room] = [];
-                grouped[record.room].push(record);
+            if (activeRecords.length === 0) {
+                container.innerHTML = emptyState('📭', 'ไม่มีพัสดุหมวดหมู่นี้');
+                return;
+            }
+            container.innerHTML = roomCards(activeRecords, record => {
+                const count = record.items.filter(i => i.transport === transportId && !i.isCompleted).length;
+                return recordRow(record, countBadge(`${count} ชิ้น`));
             });
+        }
 
-            if (Object.keys(grouped).length === 0) {
-                container.innerHTML = `
-                    <div class="flex flex-col items-center justify-center h-full text-gray-400 mt-10">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                        </svg>
-                        <p class="text-lg">ไม่มีพัสดุหมวดหมู่นี้</p>
-                    </div>`;
+        function renderPending(container) {
+            const pendingRecords = records.filter(r => r.status === 'pending');
+            if (pendingRecords.length === 0) {
+                container.innerHTML = emptyState('📦', 'ไม่มีพัสดุที่รอส่ง');
                 return;
             }
 
-            let html = '<div class="space-y-6 pb-20">';
-
-            DORM_ROOMS.forEach(room => {
-                if (grouped[room] && grouped[room].length > 0) {
-                    html += `
-                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                            <div class="bg-gray-50 px-4 py-2 border-b border-gray-100 font-semibold text-gray-700 flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                </svg>
-                                หอพัก ${room}
-                                <span class="ml-auto bg-gray-200 text-gray-600 text-xs px-2 py-1 rounded-full">${grouped[room].length} คน</span>
-                            </div>
-                            <div class="divide-y divide-gray-100">
-                    `;
-
-                    grouped[room].forEach(record => {
-                        const transportItemsCount = record.items.filter(i => i.transport === transportId && !i.isCompleted).length;
-
-                        html += `
-                            <button onclick="openDetailModal(${record.id})" class="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex justify-between items-center group focus:outline-none focus:bg-blue-50">
-                                <span class="font-medium text-gray-800 group-hover:text-blue-700 transition-colors">${escapeHtml(record.name)}</span>
-                                <div class="flex items-center gap-2">
-                                    <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full group-hover:bg-blue-100 group-hover:text-blue-700 transition-colors">${transportItemsCount} ชิ้น</span>
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-300 group-hover:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                    </svg>
-                                </div>
-                            </button>
-                        `;
-                    });
-
-                    html += `
-                            </div>
-                        </div>
-                    `;
+            renderSearchableTab(container, 'pending', 'ค้นหาชื่อ ชื่อไลน์ หอ หรือเลขพัสดุ', (area, query) => {
+                const filtered = pendingRecords.filter(r => matchesQuery(r, query));
+                if (filtered.length === 0) {
+                    area.innerHTML = emptyState('🔍', `ไม่พบรายการที่ตรงกับ “${escapeHtml(query.trim())}”`);
+                    return;
                 }
+                area.innerHTML = searchResultInfo(filtered.length, query) + roomCards(filtered, record =>
+                    recordRow(record, countBadge(`ครบ ${record.items.length} ชิ้น`, 'bg-amber-100 text-amber-800'), '', 'hover:bg-amber-50'),
+                    'amber'
+                );
             });
-
-            html += '</div>';
-            container.innerHTML = html;
         }
 
         function renderHistory(container) {
-            const historyRecords = records.filter(r => r.status === 'completed' || r.status === 'deleted');
+            const historyRecords = records
+                .filter(r => r.status === 'completed' || r.status === 'deleted')
+                .sort((a, b) => b.updatedAt - a.updatedAt);
 
-            historyRecords.sort((a, b) => b.updatedAt - a.updatedAt);
-
-            const grouped = {};
-            historyRecords.forEach(record => {
-                if (!grouped[record.room]) grouped[record.room] = [];
-                grouped[record.room].push(record);
-            });
-
-            if (Object.keys(grouped).length === 0) {
-                container.innerHTML = `
-                    <div class="flex flex-col items-center justify-center h-full text-gray-400 mt-10">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <p class="text-lg">ยังไม่มีประวัติการทำรายการ</p>
-                    </div>`;
+            if (historyRecords.length === 0) {
+                container.innerHTML = emptyState('🕒', 'ยังไม่มีประวัติการทำรายการ');
                 return;
             }
 
-            let html = '<div class="space-y-6 pb-20">';
-
-            DORM_ROOMS.forEach(room => {
-                if (grouped[room] && grouped[room].length > 0) {
-                    html += `
-                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                            <div class="bg-gray-50 px-4 py-2 border-b border-gray-100 font-semibold text-gray-700 flex items-center gap-2">
-                                หอพัก ${room}
-                            </div>
-                            <div class="divide-y divide-gray-100">
-                    `;
-
-                    grouped[room].forEach(record => {
-                        const isCompleted = record.status === 'completed';
-                        const statusColor = isCompleted ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
-                        const statusIcon = isCompleted
-                            ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>`
-                            : `<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>`;
-                        const statusText = isCompleted ? 'เสร็จสิ้น' : 'ยกเลิก/ลบ';
-
-                        const dateObj = new Date(record.updatedAt);
-                        const dateStr = `${dateObj.getDate().toString().padStart(2, '0')}/${(dateObj.getMonth()+1).toString().padStart(2, '0')}/${dateObj.getFullYear() + 543} ${dateObj.getHours().toString().padStart(2, '0')}:${dateObj.getMinutes().toString().padStart(2, '0')}`;
-
-                        html += `
-                            <button onclick="openDetailModal(${record.id})" class="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors flex justify-between items-center group focus:outline-none focus:bg-gray-50">
-                                <div>
-                                    <div class="font-medium text-gray-800">${escapeHtml(record.name)}</div>
-                                    <div class="text-xs text-gray-400 mt-1 flex items-center gap-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                        ${dateStr}
-                                    </div>
-                                </div>
-                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusColor}">
-                                    ${statusIcon} ${statusText}
-                                </span>
-                            </button>
-                        `;
-                    });
-
-                    html += `
-                            </div>
-                        </div>
-                    `;
+            renderSearchableTab(container, 'history', 'ค้นหาชื่อ ชื่อไลน์ หอ หรือเลขพัสดุ', (area, query) => {
+                const filtered = historyRecords.filter(r => matchesQuery(r, query));
+                if (filtered.length === 0) {
+                    area.innerHTML = emptyState('🔍', `ไม่พบรายการที่ตรงกับ “${escapeHtml(query.trim())}”`);
+                    return;
                 }
+                area.innerHTML = searchResultInfo(filtered.length, query) + roomCards(filtered, record => {
+                    const isCompleted = record.status === 'completed';
+                    const status = isCompleted
+                        ? countBadge('เสร็จสิ้น', 'bg-green-50 text-green-700')
+                        : countBadge('ยกเลิก/ลบ', 'bg-red-50 text-red-600');
+                    const d = new Date(record.updatedAt);
+                    const dateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear() + 543} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                    return recordRow(record, status, `<div class="text-xs text-gray-400 mt-0.5">${dateStr}</div>`);
+                });
             });
-
-            html += '</div>';
-            container.innerHTML = html;
         }
 
-        function getTransportData(transportId) {
-            return TRANSPORTS.find(t => t.id === transportId);
+        // ---------- Detail modal ----------
+
+        function itemRow(record, item) {
+            const canToggle = record.status === 'active';
+            const cod = item.isCOD;
+            const rowBg = item.isCompleted ? 'bg-gray-50 opacity-60' : (cod ? 'bg-orange-50' : 'bg-white');
+            const textCls = item.isCompleted ? 'text-gray-400 line-through' : (cod ? 'text-orange-800' : 'text-gray-800');
+
+            const toggle = canToggle ? `
+                <button onclick="toggleItemStatus(${record.id}, ${item.originalIndex})" aria-label="ติ๊กรับของ"
+                        class="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center border-2 transition-colors focus:outline-none ${item.isCompleted ? 'bg-green-500 border-green-500 text-white' : 'bg-white border-gray-200 text-transparent hover:border-green-400'}">
+                    ${ICON.check}
+                </button>` : `<span class="w-7 h-7 flex-shrink-0 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">${ICON.check}</span>`;
+
+            return `
+                <li class="flex items-center gap-3 text-sm ${rowBg} px-3 py-2.5 rounded-2xl transition-all">
+                    ${toggle}
+                    <span class="font-medium flex-1 break-all ${textCls}">${escapeHtml(item.tracking) || 'ไม่มีเลขพัสดุ'}</span>
+                    ${cod && !item.isCompleted && canToggle ? `<span class="text-xs font-semibold text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">COD</span>` : ''}
+                </li>`;
         }
 
         function openDetailModal(id) {
@@ -820,162 +662,131 @@
 
             const groupedItems = {};
             record.items.forEach((item, index) => {
-                const itemWithIndex = { ...item, originalIndex: index };
                 if (!groupedItems[item.transport]) groupedItems[item.transport] = [];
-                groupedItems[item.transport].push(itemWithIndex);
+                groupedItems[item.transport].push({ ...item, originalIndex: index });
             });
 
             const activeItemsCount = record.items.filter(i => !i.isCompleted).length;
 
-            // LINE link shown under the name (NEW)
-            const lineUrl = normalizeLink(record.lineLink);
-            const lineHtml = lineUrl ? `
-                <a href="${escapeHtml(lineUrl)}" target="_blank" rel="noopener noreferrer"
-                   class="mt-2 inline-flex items-center gap-1.5 max-w-full px-3 py-1 rounded-full bg-green-50 border border-green-200 text-green-700 text-sm font-medium hover:bg-green-100 transition-colors">
-                    <span>💬 LINE</span>
-                    <span class="truncate max-w-[220px] text-green-600 font-normal">${escapeHtml(record.lineLink)}</span>
-                </a>
-            ` : '';
+            // LINE name: green pill + copy button
+            const lineHtml = record.lineName ? `
+                <div class="mt-2 inline-flex items-center gap-1.5 max-w-full pl-3.5 pr-1 py-1 rounded-full bg-green-50 text-green-700 text-sm">
+                    <span class="font-semibold flex-shrink-0">LINE</span>
+                    <span class="truncate">${escapeHtml(record.lineName)}</span>
+                    <button onclick="copyLineName(${record.id}, this)" title="คัดลอกชื่อไลน์" aria-label="คัดลอกชื่อไลน์"
+                            class="flex-shrink-0 w-7 h-7 rounded-full bg-white/70 hover:bg-white text-green-700 flex items-center justify-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-300">
+                        ${ICON.copy}
+                    </button>
+                </div>` : '';
 
             let bodyHtml = `
-                <div class="mb-6 flex flex-col items-center text-center">
-                    <div class="h-16 w-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-2xl font-bold mb-3">
-                        ${record.room}
-                    </div>
-                    <h2 class="text-xl font-bold text-gray-800">${escapeHtml(record.name)}</h2>
+                <div class="mb-5 pt-1 flex flex-col items-center text-center">
+                    <div class="h-16 w-16 bg-blue-50 text-blue-700 rounded-full flex items-center justify-center text-xl font-semibold mb-3">${escapeHtml(record.room)}</div>
+                    <h2 class="text-xl font-semibold text-gray-800">${escapeHtml(record.name)}</h2>
                     ${lineHtml}
-                    <p class="text-sm text-gray-500 mt-1">หอพัก ${record.room} • พัสดุคงเหลือ ${activeItemsCount}/${record.items.length} ชิ้น</p>
+                    <p class="text-sm text-gray-400 mt-2">หอพัก ${escapeHtml(record.room)} · คงเหลือ ${activeItemsCount}/${record.items.length} ชิ้น</p>
                 </div>
-
-                <div class="space-y-4">
+                <div class="space-y-3">
             `;
 
             TRANSPORTS.forEach(trans => {
-                if (groupedItems[trans.id] && groupedItems[trans.id].length > 0) {
-                    const items = groupedItems[trans.id];
+                const items = groupedItems[trans.id];
+                if (!items || items.length === 0) return;
 
-                    const codItems = items.filter(i => i.isCOD);
-                    const nonCodItems = items.filter(i => !i.isCOD);
+                const nonCod = items.filter(i => !i.isCOD);
+                const cod = items.filter(i => i.isCOD);
 
-                    bodyHtml += `
-                        <div class="border rounded-xl overflow-hidden shadow-sm">
-                            <div class="px-4 py-2 flex items-center gap-2 ${trans.bgClass} border-b">
-                                <span>${trans.icon}</span>
-                                <span class="font-semibold ${trans.colorClass}">${trans.name}</span>
-                                <span class="ml-auto text-xs font-medium px-2 py-0.5 rounded-full ${trans.badgeClass}">${items.length}</span>
-                            </div>
-                            <div class="bg-white p-3 space-y-3">
-                    `;
-
-                    if (nonCodItems.length > 0) {
-                        bodyHtml += `
-                            <div>
-                                <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">ไม่ปลายทาง</h4>
-                                <ul class="space-y-2">
-                                    ${nonCodItems.map(item => `
-                                        <li class="flex items-center gap-3 text-sm ${item.isCompleted ? 'bg-gray-100 opacity-60' : 'bg-gray-50'} p-2.5 rounded-lg border border-gray-200 transition-all">
-                                            ${record.status === 'active' ? `
-                                                <button onclick="toggleItemStatus(${record.id}, ${item.originalIndex})" class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center border-2 ${item.isCompleted ? 'bg-green-500 border-green-500 text-white' : 'bg-white border-gray-300 text-transparent hover:border-green-400'} transition-colors shadow-sm focus:outline-none">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
-                                                </button>
-                                            ` : `
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
-                                            `}
-                                            <span class="font-medium ${item.isCompleted ? 'text-gray-500 line-through' : 'text-gray-800'}">${escapeHtml(item.tracking) || 'ไม่มีเลขพัสดุ'}</span>
-                                        </li>
-                                    `).join('')}
-                                </ul>
-                            </div>
-                        `;
-                    }
-
-                    if (codItems.length > 0) {
-                        bodyHtml += `
-                            <div>
-                                <h4 class="text-xs font-semibold text-orange-500 uppercase tracking-wider mb-2">เก็บเงินปลายทาง (COD)</h4>
-                                <ul class="space-y-2">
-                                    ${codItems.map(item => `
-                                        <li class="flex items-center gap-3 text-sm ${item.isCompleted ? 'bg-gray-100 opacity-60 border-gray-200' : 'bg-orange-50 border-orange-200'} p-2.5 rounded-lg border transition-all">
-                                            ${record.status === 'active' ? `
-                                                <button onclick="toggleItemStatus(${record.id}, ${item.originalIndex})" class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center border-2 ${item.isCompleted ? 'bg-green-500 border-green-500 text-white' : 'bg-white border-orange-300 text-transparent hover:border-green-400'} transition-colors shadow-sm focus:outline-none">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
-                                                </button>
-                                            ` : `
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ${item.isCompleted ? 'text-gray-400' : 'text-orange-400'}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                                            `}
-                                            <span class="font-medium flex-1 ${item.isCompleted ? 'text-gray-500 line-through' : 'text-orange-800'}">${escapeHtml(item.tracking) || 'ไม่มีเลขพัสดุ'}</span>
-                                            ${!item.isCompleted && record.status === 'active' ? `<span class="text-xs font-bold text-orange-600 bg-orange-100 px-2 py-0.5 rounded">COD</span>` : ''}
-                                        </li>
-                                    `).join('')}
-                                </ul>
-                            </div>
-                        `;
-                    }
-
-                    bodyHtml += `
-                            </div>
+                bodyHtml += `
+                    <div class="bg-gray-50 rounded-3xl p-3">
+                        <div class="flex items-center gap-2 px-1 pb-2">
+                            <span>${trans.icon}</span>
+                            <span class="font-medium ${trans.colorClass}">${trans.name}</span>
+                            <span class="ml-auto text-xs px-2 py-0.5 rounded-full ${trans.badgeClass}">${items.length}</span>
                         </div>
-                    `;
-                }
+                        ${nonCod.length ? `
+                            <p class="text-xs text-gray-400 px-1 mb-1.5">ไม่ปลายทาง</p>
+                            <ul class="space-y-1.5 mb-2">${nonCod.map(i => itemRow(record, i)).join('')}</ul>` : ''}
+                        ${cod.length ? `
+                            <p class="text-xs text-orange-500 px-1 mb-1.5">เก็บเงินปลายทาง (COD)</p>
+                            <ul class="space-y-1.5">${cod.map(i => itemRow(record, i)).join('')}</ul>` : ''}
+                    </div>`;
             });
-            bodyHtml += `</div>`;
+
+            bodyHtml += '</div>';
             body.innerHTML = bodyHtml;
 
             if (record.status === 'active') {
                 actions.innerHTML = `
-                    <button onclick="openConfirmModal('ยืนยันการลบ', 'คุณต้องการลบและย้ายข้อมูลนี้ไปประวัติสถานะยกเลิก ใช่หรือไม่?', () => markStatus(${record.id}, 'deleted'))" class="px-4 py-2 flex items-center justify-center gap-1 bg-white border border-red-200 text-red-600 rounded-lg hover:bg-red-50 text-sm font-medium transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                        ลบ
-                    </button>
+                    <button onclick="openConfirmModal('ยืนยันการลบ', 'คุณต้องการลบและย้ายข้อมูลนี้ไปประวัติสถานะยกเลิก ใช่หรือไม่?', () => markStatus(${record.id}, 'deleted'))" class="${BTN.softRed} flex items-center gap-1">${ICON.trash} ลบ</button>
                     <div class="flex-1"></div>
-                    <button onclick="editRecord(${record.id})" class="px-4 py-2 flex items-center justify-center gap-1 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                        แก้ไข
-                    </button>
-                    <button onclick="openConfirmModal('รับของครบแล้ว?', 'ระบบจะย้ายข้อมูลไปยังหน้ารอส่งของ ยืนยันหรือไม่?', () => markStatus(${record.id}, 'pending'))" class="px-5 py-2 flex items-center justify-center gap-1 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 text-sm font-medium shadow-sm transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
-                        รับของครบแล้ว
-                    </button>
+                    <button onclick="editRecord(${record.id})" class="${BTN.soft}">แก้ไข</button>
+                    <button onclick="openConfirmModal('รับของครบแล้ว?', 'ระบบจะย้ายข้อมูลไปยังหน้ารอส่งของ ยืนยันหรือไม่?', () => markStatus(${record.id}, 'pending'))" class="${BTN.amber}">รับของครบแล้ว</button>
                 `;
             } else if (record.status === 'pending') {
                 actions.innerHTML = `
-                    <button onclick="openConfirmModal('ย้อนกลับการแก้ไข', 'คุณต้องการย้อนกลับข้อมูลไปก่อนหน้านี้ ใช่หรือไม่?', () => markStatus(${record.id}, 'active'))" class="px-4 py-2 flex items-center justify-center gap-1 bg-white border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50 text-sm font-medium transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg>
-                        ย้อนกลับ (แก้ไข)
-                    </button>
+                    <button onclick="openConfirmModal('ย้อนกลับการแก้ไข', 'คุณต้องการย้อนกลับข้อมูลไปก่อนหน้านี้ ใช่หรือไม่?', () => markStatus(${record.id}, 'active'))" class="${BTN.softBlue}">ย้อนกลับ (แก้ไข)</button>
                     <div class="flex-1"></div>
-                    <button onclick="openConfirmModal('ส่งพัสดุสำเร็จ', 'ผู้รับได้รับพัสดุเรียบร้อยแล้วและต้องการย้ายไปหน้าประวัติ ใช่หรือไม่?', () => markStatus(${record.id}, 'completed'))" class="px-5 py-2 flex items-center justify-center gap-1 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium shadow-sm transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
-                        ส่งพัสดุสำเร็จ
-                    </button>
+                    <button onclick="openConfirmModal('ส่งพัสดุสำเร็จ', 'ผู้รับได้รับพัสดุเรียบร้อยแล้วและต้องการย้ายไปหน้าประวัติ ใช่หรือไม่?', () => markStatus(${record.id}, 'completed'))" class="${BTN.green}">ส่งพัสดุสำเร็จ</button>
                 `;
             } else {
                 actions.innerHTML = `
-                    <button onclick="openConfirmModal('ย้อนกลับข้อมูล', 'คุณต้องการนำข้อมูลนี้กลับมาใช้งานอีกครั้ง ใช่หรือไม่?', () => markStatus(${record.id}, 'active'))" class="px-4 py-2 flex items-center justify-center gap-1 bg-white border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50 text-sm font-medium transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg>
-                        ย้อนกลับ (Undo)
-                    </button>
+                    <button onclick="openConfirmModal('ย้อนกลับข้อมูล', 'คุณต้องการนำข้อมูลนี้กลับมาใช้งานอีกครั้ง ใช่หรือไม่?', () => markStatus(${record.id}, 'active'))" class="${BTN.softBlue}">ย้อนกลับ (Undo)</button>
                     <div class="flex-1"></div>
-                    <button onclick="closeDetailModal()" class="px-5 py-2 flex items-center justify-center gap-1 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 text-sm font-medium transition-colors">
-                        ปิด
-                    </button>
+                    <button onclick="closeDetailModal()" class="${BTN.soft}">ปิด</button>
                 `;
             }
 
             modal.classList.remove('hidden');
-            setTimeout(() => {
-                content.classList.remove('scale-95', 'opacity-0');
-            }, 10);
+            setTimeout(() => content.classList.remove('scale-95', 'opacity-0'), 10);
         }
 
         function closeDetailModal() {
             const modal = document.getElementById('detail-modal');
             const content = document.getElementById('detail-modal-content');
-
             content.classList.add('scale-95', 'opacity-0');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-            }, 200);
+            setTimeout(() => modal.classList.add('hidden'), 200);
+        }
+
+        async function copyLineName(id, btn) {
+            const record = records.find(r => r.id === id);
+            const text = record?.lineName || '';
+            if (!text) return;
+
+            let ok = false;
+            try {
+                await navigator.clipboard.writeText(text);
+                ok = true;
+            } catch {
+                // Fallback for older browsers / non-HTTPS
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.setAttribute('readonly', '');
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                try { ok = document.execCommand('copy'); } catch { ok = false; }
+                ta.remove();
+            }
+
+            if (ok) {
+                showToast('คัดลอกชื่อไลน์แล้ว', 'success');
+                if (btn) {
+                    btn.innerHTML = ICON.check;
+                    setTimeout(() => { btn.innerHTML = ICON.copy; }, 1500);
+                }
+            } else {
+                showToast('คัดลอกไม่สำเร็จ', 'error');
+            }
+        }
+
+        // ---------- Form ----------
+
+        function showFormModal() {
+            const modal = document.getElementById('form-modal');
+            const content = document.getElementById('form-modal-content');
+            modal.classList.remove('hidden');
+            setTimeout(() => content.classList.remove('scale-95', 'opacity-0'), 10);
         }
 
         function openFormModal() {
@@ -983,19 +794,12 @@
             document.getElementById('form-modal-title').innerText = 'เพิ่มข้อมูลพัสดุ';
             formData = {
                 name: '',
-                lineLink: '',
+                lineName: '',
                 room: DORM_ROOMS[0],
                 items: [{ tracking: '', transport: '', isCOD: false, isCompleted: false }]
             };
-
             updateFormUI();
-
-            const modal = document.getElementById('form-modal');
-            const content = document.getElementById('form-modal-content');
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                content.classList.remove('scale-95', 'opacity-0');
-            }, 10);
+            showFormModal();
         }
 
         function editRecord(id) {
@@ -1006,39 +810,29 @@
 
             currentEditingId = id;
             document.getElementById('form-modal-title').innerText = 'แก้ไขข้อมูลพัสดุ';
-
             formData = JSON.parse(JSON.stringify(record));
-            if (formData.lineLink === undefined) formData.lineLink = '';
+            if (formData.lineName === undefined) formData.lineName = '';
 
             updateFormUI();
-
-            const modal = document.getElementById('form-modal');
-            const content = document.getElementById('form-modal-content');
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                content.classList.remove('scale-95', 'opacity-0');
-            }, 10);
+            showFormModal();
         }
 
         function closeFormModal() {
             const modal = document.getElementById('form-modal');
             const content = document.getElementById('form-modal-content');
-
             content.classList.add('scale-95', 'opacity-0');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-            }, 200);
+            setTimeout(() => modal.classList.add('hidden'), 200);
         }
 
         function updateFormUI() {
             document.getElementById('input-name').value = formData.name;
-            document.getElementById('input-line').value = formData.lineLink || '';
+            document.getElementById('input-line').value = formData.lineName || '';
             document.getElementById('input-room').value = formData.room;
             renderFormItems();
         }
 
         document.getElementById('input-name').addEventListener('input', (e) => formData.name = e.target.value);
-        document.getElementById('input-line').addEventListener('input', (e) => formData.lineLink = e.target.value);
+        document.getElementById('input-line').addEventListener('input', (e) => formData.lineName = e.target.value);
         document.getElementById('input-room').addEventListener('change', (e) => formData.room = e.target.value);
 
         function renderFormItems() {
@@ -1046,43 +840,29 @@
 
             if (formData.items.length === 0) {
                 container.innerHTML = `
-                    <div class="text-center py-4 text-sm text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-                        ยังไม่มีรายการพัสดุ กรุณากด "+ เพิ่มของ"
+                    <div class="text-center py-5 text-sm text-gray-400 bg-gray-50 rounded-2xl">
+                        ยังไม่มีรายการพัสดุ กด “เพิ่มของ” เพื่อเริ่ม
                     </div>`;
                 return;
             }
 
             container.innerHTML = formData.items.map((item, index) => `
-                <div class="bg-gray-50 border border-gray-200 p-4 rounded-xl relative">
-                    <div class="absolute -top-3 -left-3 bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-sm">
-                        ${index + 1}
+                <div class="bg-gray-50 p-4 rounded-3xl">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-semibold text-blue-700 bg-blue-100 w-6 h-6 rounded-full flex items-center justify-center">${index + 1}</span>
+                        <button type="button" onclick="removeFormItem(${index})" aria-label="ลบรายการนี้" class="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors">${ICON.trash}</button>
                     </div>
-                    <button type="button" onclick="removeFormItem(${index})" class="absolute top-3 right-3 text-red-400 hover:text-red-600 transition-colors p-1 bg-white rounded-md shadow-sm border border-gray-100">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                    </button>
-
-                    <div class="space-y-3 mt-2">
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500 mb-1">เลขพัสดุ</label>
-                            <input type="text" value="${escapeHtml(item.tracking)}" oninput="updateItemField(${index}, 'tracking', this.value)" class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white uppercase" placeholder="กรอกเลขพัสดุ (ถ้ามี)">
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-xs font-medium text-gray-500 mb-1">ขนส่ง</label>
-                                <select onchange="updateItemField(${index}, 'transport', this.value)" class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-                                    <option value="" disabled ${!item.transport ? 'selected' : ''}>-- เลือกขนส่ง --</option>
-                                    ${TRANSPORTS.map(t => `<option value="${t.id}" ${item.transport === t.id ? 'selected' : ''}>${t.name}</option>`).join('')}
-                                </select>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-medium text-gray-500 mb-1">ประเภทจัดส่ง</label>
-                                <select onchange="updateItemField(${index}, 'isCOD', this.value === 'true')" class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white ${item.isCOD ? 'text-orange-600 font-semibold bg-orange-50 border-orange-200' : ''}">
-                                    <option value="false" ${!item.isCOD ? 'selected' : ''}>ไม่ปลายทาง</option>
-                                    <option value="true" ${item.isCOD ? 'selected' : ''}>ปลายทาง (COD)</option>
-                                </select>
-                            </div>
+                    <div class="space-y-3">
+                        <input type="text" value="${escapeHtml(item.tracking)}" oninput="updateItemField(${index}, 'tracking', this.value)" class="field field-white uppercase" placeholder="เลขพัสดุ (ถ้ามี)">
+                        <div class="grid grid-cols-2 gap-2">
+                            <select onchange="updateItemField(${index}, 'transport', this.value)" class="field field-white" aria-label="ขนส่ง">
+                                <option value="" disabled ${!item.transport ? 'selected' : ''}>เลือกขนส่ง</option>
+                                ${TRANSPORTS.map(t => `<option value="${t.id}" ${item.transport === t.id ? 'selected' : ''}>${t.name}</option>`).join('')}
+                            </select>
+                            <select onchange="updateItemField(${index}, 'isCOD', this.value === 'true')" class="field field-white ${item.isCOD ? 'text-orange-600 font-medium' : ''}" aria-label="ประเภทจัดส่ง">
+                                <option value="false" ${!item.isCOD ? 'selected' : ''}>ไม่ปลายทาง</option>
+                                <option value="true" ${item.isCOD ? 'selected' : ''}>ปลายทาง (COD)</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -1093,7 +873,6 @@
             const validTransport = TRANSPORTS.some(t => t.id === currentTab) ? currentTab : 'flash';
             formData.items.push({ tracking: '', transport: validTransport, isCOD: false, isCompleted: false });
             renderFormItems();
-
             setTimeout(() => {
                 const scrollArea = document.getElementById('form-scroll-area');
                 scrollArea.scrollTo({ top: scrollArea.scrollHeight, behavior: 'smooth' });
@@ -1107,7 +886,7 @@
 
         function updateItemField(index, field, value) {
             formData.items[index][field] = value;
-            if(field === 'isCOD') renderFormItems();
+            if (field === 'isCOD') renderFormItems();
         }
 
         async function saveRecord() {
@@ -1120,22 +899,12 @@
                 showToast("กรุณาเพิ่มรายการพัสดุอย่างน้อย 1 รายการ", "error");
                 return;
             }
-
-            const missingTransport = formData.items.some(item => !item.transport);
-            if (missingTransport) {
+            if (formData.items.some(item => !item.transport)) {
                 showToast("กรุณาเลือกขนส่งให้ครบทุกรายการ", "error");
                 return;
             }
 
-            // Validate LINE link (optional field)
-            const rawLine = (formData.lineLink || '').trim();
-            const lineLink = rawLine ? normalizeLink(rawLine) : '';
-            if (rawLine && !lineLink) {
-                showToast("ลิงก์ไลน์ไม่ถูกต้อง", "error");
-                document.getElementById('input-line').focus();
-                return;
-            }
-
+            const lineName = (formData.lineName || '').trim();
             const timestamp = Date.now();
 
             if (currentEditingId) {
@@ -1143,7 +912,7 @@
                 if (index !== -1) {
                     const fields = {
                         name: formData.name.trim(),
-                        lineLink,
+                        lineName,
                         room: formData.room,
                         items: formData.items,
                         updatedAt: timestamp
@@ -1156,10 +925,9 @@
             } else {
                 const newRecord = {
                     name: formData.name.trim(),
-                    lineLink,
+                    lineName,
                     room: formData.room,
                     items: formData.items,
-                    // extra random digits so two devices saving in the same ms don't clash
                     id: timestamp * 1000 + Math.floor(Math.random() * 1000),
                     status: 'active',
                     createdAt: timestamp,
@@ -1171,6 +939,8 @@
                 await createRecordOnServer(newRecord);
             }
         }
+
+        // ---------- Status changes ----------
 
         async function toggleItemStatus(recordId, itemIndex) {
             const record = records.find(r => r.id === recordId);
@@ -1226,59 +996,43 @@
             });
         }
 
+        // ---------- Toast & confirm ----------
+
         function showToast(message, type = 'info') {
             const container = document.getElementById('toast-container');
             const toastId = 'toast-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
 
-            let bgClass, icon;
-            if (type === 'success') {
-                bgClass = 'bg-green-600';
-                icon = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
-            } else if (type === 'error') {
-                bgClass = 'bg-red-600';
-                icon = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>';
-            } else {
-                bgClass = 'bg-gray-800';
-                icon = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
-            }
+            const bgClass = type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-gray-800';
 
-            const toastHTML = `
-                <div id="${toastId}" class="${bgClass} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 toast-show text-sm font-medium">
-                    ${icon}
+            container.insertAdjacentHTML('beforeend', `
+                <div id="${toastId}" class="${bgClass} text-white px-5 py-2.5 rounded-full shadow-lg toast-show text-sm font-medium">
                     ${message}
                 </div>
-            `;
-
-            container.insertAdjacentHTML('beforeend', toastHTML);
+            `);
 
             const toastElement = document.getElementById(toastId);
-
             setTimeout(() => {
                 toastElement.classList.remove('toast-show');
                 toastElement.classList.add('toast-hide');
-                setTimeout(() => {
-                    toastElement.remove();
-                }, 300);
-            }, 3000);
+                setTimeout(() => toastElement.remove(), 250);
+            }, 2600);
         }
 
-        document.getElementById('detail-modal').addEventListener('click', function(e) {
-            if(e.target === this) closeDetailModal();
+        document.getElementById('detail-modal').addEventListener('click', function (e) {
+            if (e.target === this) closeDetailModal();
         });
-        document.getElementById('form-modal').addEventListener('click', function(e) {
-            if(e.target === this) closeFormModal();
+        document.getElementById('form-modal').addEventListener('click', function (e) {
+            if (e.target === this) closeFormModal();
         });
-        document.getElementById('confirm-modal').addEventListener('click', function(e) {
-            if(e.target === this) closeConfirmModal();
+        document.getElementById('confirm-modal').addEventListener('click', function (e) {
+            if (e.target === this) closeConfirmModal();
         });
 
-        document.addEventListener('click', function(e) {
+        document.addEventListener('click', function (e) {
             if (!mobileMenuOpen) return;
             const menu = document.getElementById('mobile-menu');
             const hamburgerBtn = document.getElementById('hamburger-btn');
-            if (!menu.contains(e.target) && !hamburgerBtn.contains(e.target)) {
-                closeMobileMenu();
-            }
+            if (!menu.contains(e.target) && !hamburgerBtn.contains(e.target)) closeMobileMenu();
         });
 
         let confirmActionCallback = null;
@@ -1288,28 +1042,25 @@
             document.getElementById('confirm-message').innerText = message;
             confirmActionCallback = callback;
 
-            const btn = document.getElementById('btn-confirm-action');
-            btn.onclick = function() {
-                if(confirmActionCallback) confirmActionCallback();
+            document.getElementById('btn-confirm-action').onclick = function () {
+                if (confirmActionCallback) confirmActionCallback();
                 closeConfirmModal();
             };
 
             const modal = document.getElementById('confirm-modal');
             const content = document.getElementById('confirm-modal-content');
             modal.classList.remove('hidden');
-            setTimeout(() => {
-                content.classList.remove('scale-95', 'opacity-0');
-            }, 10);
+            setTimeout(() => content.classList.remove('scale-95', 'opacity-0'), 10);
         }
 
         function closeConfirmModal() {
             const modal = document.getElementById('confirm-modal');
             const content = document.getElementById('confirm-modal-content');
             content.classList.add('scale-95', 'opacity-0');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-            }, 200);
+            setTimeout(() => modal.classList.add('hidden'), 200);
         }
+
+        // ---------- Pull to refresh ----------
 
         (function setupPullToRefresh() {
             const container = document.getElementById('main-content');
@@ -1373,7 +1124,6 @@
         })();
 
         window.addEventListener('DOMContentLoaded', initApp);
-
     </script>
 </body>
 </html>
