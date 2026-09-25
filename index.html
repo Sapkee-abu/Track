@@ -140,7 +140,11 @@
     <div id="form-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-gray-900/30 backdrop-blur-sm p-4">
         <div class="bg-white rounded-[28px] shadow-2xl w-full max-w-lg max-h-[95vh] flex flex-col overflow-hidden transform scale-95 opacity-0 transition-all duration-200" id="form-modal-content">
             <div class="px-6 pt-5 pb-2 flex justify-between items-center">
-                <h3 class="text-lg font-semibold text-gray-800" id="form-modal-title">เพิ่มข้อมูลพัสดุ</h3>
+                <div class="flex items-center gap-2 min-w-0">
+                    <h3 class="text-lg font-semibold text-gray-800 truncate" id="form-modal-title">เพิ่มข้อมูลพัสดุ</h3>
+                    <button type="button" id="quick-add-btn" onclick="setQuickAddStep('input')" title="เพิ่มข้อมูลแบบเร็ว" aria-label="เพิ่มข้อมูลแบบเร็ว"
+                            class="flex-shrink-0 w-9 h-9 rounded-full bg-amber-100 text-lg flex items-center justify-center hover:bg-amber-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300">⚡</button>
+                </div>
                 <button onclick="closeFormModal()" class="w-9 h-9 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors" aria-label="ปิด">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
@@ -148,9 +152,6 @@
 
             <div class="px-6 py-3 overflow-y-auto flex-1" id="form-scroll-area">
                 <div class="space-y-4">
-                    <!-- Smart Quick Add (new records only). Fills the fields below; never saves by itself. -->
-                    <div id="quick-add-box"></div>
-
                     <div>
                         <label for="input-name" class="block text-sm text-gray-500 mb-1.5 ml-1">ชื่อ-นามสกุล</label>
                         <input type="text" id="input-name" class="field" placeholder="กรอกชื่อ นามสกุล">
@@ -168,7 +169,10 @@
 
                     <div class="pt-2">
                         <div class="flex justify-between items-center mb-3">
-                            <span class="text-sm text-gray-500 ml-1">รายการพัสดุ</span>
+                            <span class="text-sm text-gray-500 ml-1 flex items-center gap-2">
+                                รายการพัสดุ
+                                <span id="form-items-count" class="text-xs font-medium text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full">0 ชิ้น</span>
+                            </span>
                             <button type="button" onclick="addFormItem()" class="text-sm bg-blue-50 text-blue-700 pl-2.5 pr-3.5 py-1.5 rounded-full font-medium hover:bg-blue-100 transition-colors flex items-center gap-1">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m7-7H5" /></svg>
                                 เพิ่มของ
@@ -183,6 +187,13 @@
                 <button type="button" onclick="closeFormModal()" class="px-5 py-2.5 rounded-full text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors">ยกเลิก</button>
                 <button type="button" onclick="saveRecord()" class="px-5 py-2.5 rounded-full text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors">บันทึกข้อมูล</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Smart Quick Add popup (opened from the ⚡ button in the form header) -->
+    <div id="quick-add-modal" class="fixed inset-0 z-[60] hidden flex items-center justify-center bg-gray-900/30 backdrop-blur-sm p-4">
+        <div id="quick-add-modal-content" class="bg-white rounded-[28px] shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto p-5 transform scale-95 opacity-0 transition-all duration-200">
+            <div id="quick-add-box"></div>
         </div>
     </div>
 
@@ -390,6 +401,43 @@
             renderList(listArea, q);
         }
 
+        // Counts pieces per courier. filterFn picks which items count.
+        function tallyItems(recordList, filterFn = () => true) {
+            const byTransport = {};
+            let total = 0;
+            recordList.forEach(r => r.items.forEach(i => {
+                if (!filterFn(i)) return;
+                total += 1;
+                byTransport[i.transport] = (byTransport[i.transport] || 0) + 1;
+            }));
+            return { total, byTransport };
+        }
+
+        // Summary card: total pieces + people, and one chip per courier.
+        // clickable = chips switch to that courier's tab.
+        function totalsCard({ label, total, people, byTransport, tone = 'blue', clickable = false }) {
+            const big = tone === 'amber' ? 'text-amber-700' : 'text-blue-700';
+            const chips = TRANSPORTS.map(t => {
+                const n = byTransport[t.id] || 0;
+                const inner = `<span class="truncate min-w-0">${t.icon} ${t.name}</span><span class="font-semibold flex-shrink-0">${n}</span>`;
+                const cls = `min-w-0 flex items-center justify-between gap-2 px-3 py-2 rounded-2xl text-sm ${n ? 'bg-gray-50 text-gray-700' : 'bg-gray-50/60 text-gray-300'}`;
+                return clickable
+                    ? `<button onclick="switchTab('${t.id}')" class="${cls} hover:bg-gray-100 transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-200">${inner}</button>`
+                    : `<div class="${cls}">${inner}</div>`;
+            }).join('');
+            return `
+                <section class="card p-4 mb-4">
+                    <div class="flex items-end justify-between px-1 mb-3">
+                        <div>
+                            <p class="text-sm text-gray-400">${label}</p>
+                            <p class="text-2xl font-semibold ${big} leading-tight">${total.toLocaleString()} <span class="text-base font-normal text-gray-400">ชิ้น</span></p>
+                        </div>
+                        <span class="text-sm text-gray-400">${people} คน</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">${chips}</div>
+                </section>`;
+        }
+
         function searchResultInfo(count, query) {
             if (!query.trim()) return '';
             return `<p class="text-xs text-gray-400 mb-3 ml-2">พบ ${count} รายการ</p>`;
@@ -469,16 +517,32 @@
             renderApp();
         }
 
+        // Piece counts shown on the tabs: waiting parcels per courier, all of them, and รอส่งของ.
+        function tabCounts() {
+            const active = tallyItems(records.filter(r => r.status === 'active'), i => !i.isCompleted);
+            const pending = tallyItems(records.filter(r => r.status === 'pending'));
+            const counts = { all: active.total, pending: pending.total };
+            TRANSPORTS.forEach(t => { counts[t.id] = active.byTransport[t.id] || 0; });
+            return counts;
+        }
+
         function renderTabs() {
+            const counts = tabCounts();
+            const badge = (id, activeTab) => {
+                const n = counts[id];
+                if (n === undefined) return '';
+                return `<span class="ml-1 text-xs px-1.5 py-0.5 rounded-full ${activeTab ? 'bg-white/25' : 'bg-gray-100 text-gray-500'}">${n}</span>`;
+            };
+
             document.getElementById('tabs-container').innerHTML = TABS.map(tab => `
                 <button onclick="switchTab('${tab.id}')" class="flex-shrink-0 px-4 py-2 rounded-full text-sm whitespace-nowrap transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 ${tab.id === currentTab ? 'bg-blue-600 text-white font-medium' : 'text-gray-500 hover:bg-gray-100'}">
-                    ${tab.icon} ${tab.label}
+                    ${tab.icon} ${tab.label}${badge(tab.id, tab.id === currentTab)}
                 </button>
             `).join('');
 
             document.getElementById('mobile-menu').innerHTML = TABS.map(tab => `
-                <button onclick="switchTab('${tab.id}')" class="w-full text-left px-4 py-3 rounded-2xl text-sm transition-colors focus:outline-none ${tab.id === currentTab ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-600 hover:bg-gray-50'}">
-                    ${tab.icon} ${tab.label}
+                <button onclick="switchTab('${tab.id}')" class="w-full flex items-center justify-between text-left px-4 py-3 rounded-2xl text-sm transition-colors focus:outline-none ${tab.id === currentTab ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-600 hover:bg-gray-50'}">
+                    <span>${tab.icon} ${tab.label}</span>${badge(tab.id, false)}
                 </button>
             `).join('');
         }
@@ -508,6 +572,7 @@
 
         function renderApp() {
             const page = document.getElementById('page');
+            renderTabs();
 
             if (currentTab === 'all') renderAllTab(page);
             else if (currentTab === 'history') renderHistory(page);
@@ -660,7 +725,11 @@
                 container.innerHTML = emptyState('📭', 'ไม่มีพัสดุที่กำลังดำเนินการ');
                 return;
             }
-            container.innerHTML = roomCards(activeRecords, record => {
+            const totals = tallyItems(activeRecords, i => !i.isCompleted);
+            container.innerHTML = totalsCard({
+                label: 'พัสดุที่รอรับทั้งหมด', total: totals.total, people: activeRecords.length,
+                byTransport: totals.byTransport, clickable: true
+            }) + roomCards(activeRecords, record => {
                 const remaining = record.items.filter(i => !i.isCompleted);
                 const icons = [...new Set(remaining.map(i => i.transport))]
                     .map(id => getTransportData(id)?.icon || '').join(' ');
@@ -677,7 +746,16 @@
                 container.innerHTML = emptyState('📭', 'ไม่มีพัสดุหมวดหมู่นี้');
                 return;
             }
-            container.innerHTML = roomCards(activeRecords, record => {
+            const t = getTransportData(transportId);
+            const total = tallyItems(activeRecords, i => i.transport === transportId && !i.isCompleted).total;
+            container.innerHTML = `
+                <section class="card px-5 py-4 mb-4 flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-400">${t.icon} ${t.name} ทั้งหมด</p>
+                        <p class="text-2xl font-semibold text-blue-700 leading-tight">${total.toLocaleString()} <span class="text-base font-normal text-gray-400">ชิ้น</span></p>
+                    </div>
+                    <span class="text-sm text-gray-400">${activeRecords.length} คน</span>
+                </section>` + roomCards(activeRecords, record => {
                 const count = record.items.filter(i => i.transport === transportId && !i.isCompleted).length;
                 return recordRow(record, countBadge(`${count} ชิ้น`));
             });
@@ -696,7 +774,11 @@
                     area.innerHTML = emptyState('🔍', `ไม่พบรายการที่ตรงกับ “${escapeHtml(query.trim())}”`);
                     return;
                 }
-                area.innerHTML = searchResultInfo(filtered.length, query) + roomCards(filtered, record =>
+                const totals = tallyItems(filtered);
+                area.innerHTML = totalsCard({
+                    label: query.trim() ? 'รอส่งของ (ที่ค้นเจอ)' : 'รอส่งของทั้งหมด',
+                    total: totals.total, people: filtered.length, byTransport: totals.byTransport, tone: 'amber'
+                }) + roomCards(filtered, record =>
                     recordRow(record, countBadge(`ครบ ${record.items.length} ชิ้น`, 'bg-amber-100 text-amber-800'), '', 'hover:bg-amber-50'),
                     'amber'
                 );
@@ -1093,6 +1175,7 @@
 
         function renderFormItems() {
             const container = document.getElementById('form-items-container');
+            document.getElementById('form-items-count').textContent = `${formData.items.length} ชิ้น`;
 
             if (formData.items.length === 0) {
                 container.innerHTML = `
@@ -1168,33 +1251,46 @@
             return getTransportData(id)?.name || '-';
         }
 
+        function toggleQuickAddModal(open) {
+            const modal = document.getElementById('quick-add-modal');
+            const content = document.getElementById('quick-add-modal-content');
+            const isOpen = !modal.classList.contains('hidden');
+            if (open && !isOpen) {
+                modal.classList.remove('hidden');
+                setTimeout(() => content.classList.remove('scale-95', 'opacity-0'), 10);
+            } else if (!open && isOpen) {
+                content.classList.add('scale-95', 'opacity-0');
+                setTimeout(() => modal.classList.add('hidden'), 200);
+            }
+        }
+
         function renderQuickAdd() {
             const box = document.getElementById('quick-add-box');
-            if (!quickAdd.enabled) { box.innerHTML = ''; return; }
+            // ⚡ button only when adding a new record (not when editing)
+            document.getElementById('quick-add-btn').classList.toggle('hidden', !quickAdd.enabled);
 
-            if (quickAdd.step === 'closed') {
-                box.innerHTML = `
-                    <button type="button" onclick="setQuickAddStep('input')" class="w-full flex items-center gap-3 text-left px-4 py-3 rounded-3xl bg-amber-50 hover:bg-amber-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300">
-                        <span class="w-9 h-9 rounded-2xl bg-white flex items-center justify-center text-lg flex-shrink-0">⚡</span>
-                        <span class="min-w-0">
-                            <span class="block text-sm font-semibold text-amber-900">เพิ่มข้อมูลแบบเร็ว</span>
-                            <span class="block text-xs text-amber-700/80">วางข้อความจาก User ให้ระบบกรอกฟอร์มให้</span>
-                        </span>
-                    </button>`;
+            if (!quickAdd.enabled || quickAdd.step === 'closed') {
+                toggleQuickAddModal(false);
                 return;
             }
+            toggleQuickAddModal(true);
 
+            const loadingNow = quickAdd.step === 'loading';
             const header = `
-                <div class="flex items-center gap-2 mb-3">
-                    <span class="text-lg">⚡</span>
-                    <span class="text-sm font-semibold text-amber-900">เพิ่มข้อมูลแบบเร็ว</span>
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center text-lg">⚡</span>
+                        <span class="text-base font-semibold text-gray-800">เพิ่มข้อมูลแบบเร็ว</span>
+                    </div>
+                    <button type="button" onclick="setQuickAddStep('closed', { text: '' })" ${loadingNow ? 'disabled' : ''} aria-label="ปิด"
+                            class="w-9 h-9 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">${ICON.close}</button>
                 </div>`;
 
             if (quickAdd.step === 'preview') {
                 const r = quickAdd.result;
                 const dash = (v) => v ? escapeHtml(v) : '<span class="text-gray-300">-</span>';
                 const parcels = r.parcels.map((p, k) => `
-                    <li class="bg-white rounded-2xl px-3 py-2 text-sm">
+                    <li class="bg-gray-50 rounded-2xl px-3 py-2 text-sm">
                         <div class="font-medium text-gray-800">${k + 1}. ${p.carrier ? escapeHtml(carrierName(p.carrier)) : '<span class="text-gray-400">ขนส่ง: -</span>'}</div>
                         <div class="text-xs text-gray-500 mt-0.5">Tracking: ${dash(p.trackingNumber)} · ปลายทาง: ${dash(p.destination)}</div>
                     </li>`).join('');
@@ -1204,18 +1300,18 @@
                     </ul>` : '';
 
                 box.innerHTML = `
-                    <div class="rounded-3xl bg-amber-50 p-4">
+                    <div>
                         ${header}
                         <p class="text-xs text-gray-500 mb-2">พบข้อมูล:</p>
-                        <div class="bg-white rounded-2xl px-3 py-2 text-sm space-y-0.5">
+                        <div class="bg-gray-50 rounded-2xl px-3 py-2 text-sm space-y-0.5">
                             <div><span class="text-gray-400">ชื่อ:</span> ${dash(r.fullName)}</div>
                             <div><span class="text-gray-400">หอพัก:</span> ${dash(r.dormNumber)}</div>
-                            <div><span class="text-gray-400">พัสดุ:</span> ${r.parcels.length} รายการ</div>
+                            <div><span class="text-gray-400">พัสดุ:</span> ${r.parcels.length} ชิ้น</div>
                         </div>
                         ${parcels ? `<ul class="mt-2 space-y-1.5">${parcels}</ul>` : ''}
                         ${warnings}
                         <div class="flex gap-2 justify-end mt-4">
-                            <button type="button" onclick="setQuickAddStep('input')" class="px-4 py-2.5 rounded-full text-sm font-medium text-gray-700 bg-white hover:bg-gray-100 transition-colors">แก้ข้อความ</button>
+                            <button type="button" onclick="setQuickAddStep('input')" class="${BTN.soft}">แก้ข้อความ</button>
                             <button type="button" onclick="applyQuickAdd()" class="${BTN.primary}">ยืนยันและเพิ่มข้อมูล</button>
                         </div>
                     </div>`;
@@ -1225,15 +1321,15 @@
             // input / loading
             const loading = quickAdd.step === 'loading';
             box.innerHTML = `
-                <div class="rounded-3xl bg-amber-50 p-4">
+                <div>
                     ${header}
                     <label for="quick-add-text" class="block text-sm text-gray-500 mb-1.5 ml-1">วางข้อความจาก User</label>
                     <textarea id="quick-add-text" rows="4" maxlength="2000" ${loading ? 'disabled' : ''}
-                              class="field field-white resize-y leading-relaxed"
+                              class="field resize-y leading-relaxed"
                               placeholder="เช่น เจ ห้อง 8 มีแฟลช 2 ชิ้น"></textarea>
                     ${quickAdd.error ? `<p class="text-sm text-red-600 mt-2 ml-1">${escapeHtml(quickAdd.error)}</p>` : ''}
                     <div class="flex gap-2 justify-end mt-3">
-                        <button type="button" onclick="setQuickAddStep('closed', { text: '' })" ${loading ? 'disabled' : ''} class="px-4 py-2.5 rounded-full text-sm font-medium text-gray-700 bg-white hover:bg-gray-100 transition-colors">ยกเลิก</button>
+                        <button type="button" onclick="setQuickAddStep('closed', { text: '' })" ${loading ? 'disabled' : ''} class="${BTN.soft}">ยกเลิก</button>
                         <button type="button" onclick="submitQuickAdd()" ${loading ? 'disabled' : ''} class="${BTN.primary} flex items-center gap-2 disabled:opacity-70">
                             ${loading ? `<span class="w-4 h-4 border-2 border-white/60 border-t-transparent rounded-full animate-spin"></span> กำลังวิเคราะห์…` : 'ยืนยัน'}
                         </button>
@@ -1255,7 +1351,7 @@
 
             setQuickAddStep('loading');
             const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), 30000);
+            const timer = setTimeout(() => controller.abort(), 55000);
             try {
                 const res = await fetch(`${API_BASE_URL}/api/quick-add/parse`, {
                     method: 'POST',
@@ -1468,6 +1564,9 @@
         });
         document.getElementById('form-modal').addEventListener('click', function (e) {
             if (e.target === this) closeFormModal();
+        });
+        document.getElementById('quick-add-modal').addEventListener('click', function (e) {
+            if (e.target === this && quickAdd.step !== 'loading') setQuickAddStep('closed', { text: '' });
         });
         document.getElementById('confirm-modal').addEventListener('click', function (e) {
             if (e.target === this) closeConfirmModal();
