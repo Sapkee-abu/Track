@@ -462,7 +462,7 @@
             await loadData();
 
             document.getElementById('input-room').innerHTML =
-                `<option value="" disabled>เลือกหอพัก</option>` +
+                `<option value="">เลือกหอพัก</option>` +
                 DORM_ROOMS.map(room => `<option value="${room}">${room}</option>`).join('');
 
             renderTabs();
@@ -1026,6 +1026,7 @@
         function showFormModal() {
             const modal = document.getElementById('form-modal');
             const content = document.getElementById('form-modal-content');
+            document.getElementById('form-scroll-area').scrollTop = 0;
             modal.classList.remove('hidden');
             setTimeout(() => content.classList.remove('scale-95', 'opacity-0'), 10);
         }
