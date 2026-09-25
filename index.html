@@ -63,6 +63,9 @@
         .toast-show { animation: slideIn .25s ease-out forwards; }
         .toast-hide { animation: fadeOut .25s forwards; }
 
+        /* Form fields still empty after Smart Quick Add / a failed save */
+        .field-missing { border-color: #fcd34d !important; background: #fffbeb !important; }
+
         /* History rows: long-press to select */
         [data-history-id] {
             -webkit-touch-callout: none;
@@ -145,6 +148,9 @@
 
             <div class="px-6 py-3 overflow-y-auto flex-1" id="form-scroll-area">
                 <div class="space-y-4">
+                    <!-- Smart Quick Add (new records only). Fills the fields below; never saves by itself. -->
+                    <div id="quick-add-box"></div>
+
                     <div>
                         <label for="input-name" class="block text-sm text-gray-500 mb-1.5 ml-1">ชื่อ-นามสกุล</label>
                         <input type="text" id="input-name" class="field" placeholder="กรอกชื่อ นามสกุล">
@@ -198,7 +204,10 @@
 
     <script src="config.js"></script>
     <script>
-        const DORM_ROOMS = ['1', '2', '3', '4', '5', '7', '13', '14', '15', '16', '17', '18', 'เรสA', 'เรสB', 'เรสC', 'เรสC2'];
+        const DORM_ROOMS = [
+            ...Array.from({ length: 18 }, (_, i) => String(i + 1)),
+            'เรสA', 'เรสB', 'เรสC', 'เรสC2'
+        ];
         const TRANSPORTS = [
             { id: 'flash', name: 'Flash Express', colorClass: 'text-yellow-700', badgeClass: 'bg-yellow-100 text-yellow-800', icon: '⚡' },
             { id: 'jt', name: 'J&T Express', colorClass: 'text-red-600', badgeClass: 'bg-red-100 text-red-700', icon: '🔴' },
@@ -251,7 +260,9 @@
         let currentTab = 'flash';
         let currentEditingId = null;
         let mobileMenuOpen = false;
-        let formData = { name: '', lineName: '', room: DORM_ROOMS[0], items: [] };
+        let formData = { name: '', lineName: '', room: '', items: [] };
+        // true after Smart Quick Add / a failed save: empty required fields turn amber
+        let showMissingFields = false;
 
         // Search text per tab, kept while switching tabs / refreshing
         const searchQueries = { pending: '', history: '' };
@@ -451,6 +462,7 @@
             await loadData();
 
             document.getElementById('input-room').innerHTML =
+                `<option value="" disabled>เลือกหอพัก</option>` +
                 DORM_ROOMS.map(room => `<option value="${room}">${room}</option>`).join('');
 
             renderTabs();
@@ -1024,9 +1036,11 @@
             formData = {
                 name: '',
                 lineName: '',
-                room: DORM_ROOMS[0],
+                room: '',
                 items: [{ tracking: '', transport: '', isCOD: false, isCompleted: false }]
             };
+            showMissingFields = false;
+            resetQuickAdd(true);
             updateFormUI();
             showFormModal();
         }
@@ -1041,6 +1055,8 @@
             document.getElementById('form-modal-title').innerText = 'แก้ไขข้อมูลพัสดุ';
             formData = JSON.parse(JSON.stringify(record));
             if (formData.lineName === undefined) formData.lineName = '';
+            showMissingFields = false;
+            resetQuickAdd(false);
 
             updateFormUI();
             showFormModal();
@@ -1054,15 +1070,25 @@
         }
 
         function updateFormUI() {
-            document.getElementById('input-name').value = formData.name;
+            const nameInput = document.getElementById('input-name');
+            nameInput.value = formData.name;
+            nameInput.classList.toggle('field-missing', showMissingFields && !formData.name.trim());
             document.getElementById('input-line').value = formData.lineName || '';
-            document.getElementById('input-room').value = formData.room;
+            const roomSelect = document.getElementById('input-room');
+            roomSelect.value = formData.room || '';
+            roomSelect.classList.toggle('field-missing', showMissingFields && !formData.room);
             renderFormItems();
         }
 
-        document.getElementById('input-name').addEventListener('input', (e) => formData.name = e.target.value);
+        document.getElementById('input-name').addEventListener('input', (e) => {
+            formData.name = e.target.value;
+            if (e.target.value.trim()) e.target.classList.remove('field-missing');
+        });
         document.getElementById('input-line').addEventListener('input', (e) => formData.lineName = e.target.value);
-        document.getElementById('input-room').addEventListener('change', (e) => formData.room = e.target.value);
+        document.getElementById('input-room').addEventListener('change', (e) => {
+            formData.room = e.target.value;
+            e.target.classList.remove('field-missing');
+        });
 
         function renderFormItems() {
             const container = document.getElementById('form-items-container');
@@ -1084,13 +1110,14 @@
                     <div class="space-y-3">
                         <input type="text" value="${escapeHtml(item.tracking)}" oninput="updateItemField(${index}, 'tracking', this.value)" class="field field-white uppercase" placeholder="เลขพัสดุ (ถ้ามี)">
                         <div class="grid grid-cols-2 gap-2">
-                            <select onchange="updateItemField(${index}, 'transport', this.value)" class="field field-white" aria-label="ขนส่ง">
+                            <select onchange="updateItemField(${index}, 'transport', this.value)" class="field field-white ${showMissingFields && !item.transport ? 'field-missing' : ''}" aria-label="ขนส่ง">
                                 <option value="" disabled ${!item.transport ? 'selected' : ''}>เลือกขนส่ง</option>
                                 ${TRANSPORTS.map(t => `<option value="${t.id}" ${item.transport === t.id ? 'selected' : ''}>${t.name}</option>`).join('')}
                             </select>
-                            <select onchange="updateItemField(${index}, 'isCOD', this.value === 'true')" class="field field-white ${item.isCOD ? 'text-orange-600 font-medium' : ''}" aria-label="ประเภทจัดส่ง">
-                                <option value="false" ${!item.isCOD ? 'selected' : ''}>ไม่ปลายทาง</option>
-                                <option value="true" ${item.isCOD ? 'selected' : ''}>ปลายทาง (COD)</option>
+                            <select onchange="updateItemField(${index}, 'isCOD', this.value === 'true')" class="field field-white ${item.isCOD ? 'text-orange-600 font-medium' : ''} ${showMissingFields && item.isCOD == null ? 'field-missing' : ''}" aria-label="ประเภทจัดส่ง">
+                                <option value="" disabled ${item.isCOD == null ? 'selected' : ''}>ยังไม่ระบุ</option>
+                                <option value="false" ${item.isCOD === false ? 'selected' : ''}>ไม่ปลายทาง</option>
+                                <option value="true" ${item.isCOD === true ? 'selected' : ''}>ปลายทาง (COD)</option>
                             </select>
                         </div>
                     </div>
@@ -1115,11 +1142,185 @@
 
         function updateItemField(index, field, value) {
             formData.items[index][field] = value;
-            if (field === 'isCOD') renderFormItems();
+            if (field === 'isCOD' || field === 'transport') renderFormItems();
+        }
+
+        // ---------- Smart Quick Add ----------
+        // Paste a resident's message -> backend parses it (rules or Gemini, key stays on
+        // the server) -> preview -> fills THIS form. Saving is still the normal
+        // "บันทึกข้อมูล" button; nothing is written to the database here.
+
+        const QUICK_ADD_FAILED = 'ไม่สามารถวิเคราะห์ข้อมูลได้ กรุณาลองใหม่อีกครั้ง';
+        const quickAdd = { enabled: true, step: 'closed', text: '', result: null, error: '' };
+
+        function resetQuickAdd(enabled) {
+            Object.assign(quickAdd, { enabled, step: 'closed', text: '', result: null, error: '' });
+            renderQuickAdd();
+        }
+
+        function setQuickAddStep(step, extra = {}) {
+            Object.assign(quickAdd, { step, error: '' }, extra);
+            renderQuickAdd();
+        }
+
+        function carrierName(id) {
+            return getTransportData(id)?.name || '-';
+        }
+
+        function renderQuickAdd() {
+            const box = document.getElementById('quick-add-box');
+            if (!quickAdd.enabled) { box.innerHTML = ''; return; }
+
+            if (quickAdd.step === 'closed') {
+                box.innerHTML = `
+                    <button type="button" onclick="setQuickAddStep('input')" class="w-full flex items-center gap-3 text-left px-4 py-3 rounded-3xl bg-amber-50 hover:bg-amber-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300">
+                        <span class="w-9 h-9 rounded-2xl bg-white flex items-center justify-center text-lg flex-shrink-0">⚡</span>
+                        <span class="min-w-0">
+                            <span class="block text-sm font-semibold text-amber-900">เพิ่มข้อมูลแบบเร็ว</span>
+                            <span class="block text-xs text-amber-700/80">วางข้อความจาก User ให้ระบบกรอกฟอร์มให้</span>
+                        </span>
+                    </button>`;
+                return;
+            }
+
+            const header = `
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="text-lg">⚡</span>
+                    <span class="text-sm font-semibold text-amber-900">เพิ่มข้อมูลแบบเร็ว</span>
+                </div>`;
+
+            if (quickAdd.step === 'preview') {
+                const r = quickAdd.result;
+                const dash = (v) => v ? escapeHtml(v) : '<span class="text-gray-300">-</span>';
+                const parcels = r.parcels.map((p, k) => `
+                    <li class="bg-white rounded-2xl px-3 py-2 text-sm">
+                        <div class="font-medium text-gray-800">${k + 1}. ${p.carrier ? escapeHtml(carrierName(p.carrier)) : '<span class="text-gray-400">ขนส่ง: -</span>'}</div>
+                        <div class="text-xs text-gray-500 mt-0.5">Tracking: ${dash(p.trackingNumber)} · ปลายทาง: ${dash(p.destination)}</div>
+                    </li>`).join('');
+                const warnings = r.warnings.length ? `
+                    <ul class="mt-3 space-y-1">
+                        ${r.warnings.map(w => `<li class="text-xs text-amber-800 bg-amber-100/70 rounded-xl px-3 py-1.5">⚠️ ${escapeHtml(w)}</li>`).join('')}
+                    </ul>` : '';
+
+                box.innerHTML = `
+                    <div class="rounded-3xl bg-amber-50 p-4">
+                        ${header}
+                        <p class="text-xs text-gray-500 mb-2">พบข้อมูล:</p>
+                        <div class="bg-white rounded-2xl px-3 py-2 text-sm space-y-0.5">
+                            <div><span class="text-gray-400">ชื่อ:</span> ${dash(r.fullName)}</div>
+                            <div><span class="text-gray-400">หอพัก:</span> ${dash(r.dormNumber)}</div>
+                            <div><span class="text-gray-400">พัสดุ:</span> ${r.parcels.length} รายการ</div>
+                        </div>
+                        ${parcels ? `<ul class="mt-2 space-y-1.5">${parcels}</ul>` : ''}
+                        ${warnings}
+                        <div class="flex gap-2 justify-end mt-4">
+                            <button type="button" onclick="setQuickAddStep('input')" class="px-4 py-2.5 rounded-full text-sm font-medium text-gray-700 bg-white hover:bg-gray-100 transition-colors">แก้ข้อความ</button>
+                            <button type="button" onclick="applyQuickAdd()" class="${BTN.primary}">ยืนยันและเพิ่มข้อมูล</button>
+                        </div>
+                    </div>`;
+                return;
+            }
+
+            // input / loading
+            const loading = quickAdd.step === 'loading';
+            box.innerHTML = `
+                <div class="rounded-3xl bg-amber-50 p-4">
+                    ${header}
+                    <label for="quick-add-text" class="block text-sm text-gray-500 mb-1.5 ml-1">วางข้อความจาก User</label>
+                    <textarea id="quick-add-text" rows="4" maxlength="2000" ${loading ? 'disabled' : ''}
+                              class="field field-white resize-y leading-relaxed"
+                              placeholder="เช่น เจ ห้อง 8 มีแฟลช 2 ชิ้น"></textarea>
+                    ${quickAdd.error ? `<p class="text-sm text-red-600 mt-2 ml-1">${escapeHtml(quickAdd.error)}</p>` : ''}
+                    <div class="flex gap-2 justify-end mt-3">
+                        <button type="button" onclick="setQuickAddStep('closed', { text: '' })" ${loading ? 'disabled' : ''} class="px-4 py-2.5 rounded-full text-sm font-medium text-gray-700 bg-white hover:bg-gray-100 transition-colors">ยกเลิก</button>
+                        <button type="button" onclick="submitQuickAdd()" ${loading ? 'disabled' : ''} class="${BTN.primary} flex items-center gap-2 disabled:opacity-70">
+                            ${loading ? `<span class="w-4 h-4 border-2 border-white/60 border-t-transparent rounded-full animate-spin"></span> กำลังวิเคราะห์…` : 'ยืนยัน'}
+                        </button>
+                    </div>
+                </div>`;
+
+            const textarea = document.getElementById('quick-add-text');
+            textarea.value = quickAdd.text;
+            textarea.addEventListener('input', (e) => { quickAdd.text = e.target.value; });
+            if (!loading) textarea.focus();
+        }
+
+        async function submitQuickAdd() {
+            const text = quickAdd.text.trim();
+            if (!text) {
+                setQuickAddStep('input', { error: 'กรุณาวางข้อความก่อน' });
+                return;
+            }
+
+            setQuickAddStep('loading');
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 30000);
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/quick-add/parse`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text }),
+                    signal: controller.signal
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.error || QUICK_ADD_FAILED);
+
+                if (data.empty || !Array.isArray(data.parcels)) {
+                    setQuickAddStep('input', { error: 'ไม่พบข้อมูลที่สามารถนำเข้าได้' });
+                    return;
+                }
+                setQuickAddStep('preview', { result: data });
+            } catch (e) {
+                console.error('Quick add failed', e);
+                setQuickAddStep('input', { error: e.name === 'AbortError' || e instanceof TypeError ? QUICK_ADD_FAILED : e.message });
+            } finally {
+                clearTimeout(timer);
+            }
+        }
+
+        function isBlankItem(item) {
+            return !String(item.tracking || '').trim() && !item.transport;
+        }
+
+        // Fills the existing form. Parcels go into the empty rows at the end of the
+        // list; extra rows are made with the normal "เพิ่มของ" logic (addFormItem).
+        function applyQuickAdd() {
+            const r = quickAdd.result;
+            if (!r) return;
+
+            if (r.fullName) formData.name = r.fullName;
+            if (r.dormNumber && DORM_ROOMS.includes(r.dormNumber)) formData.room = r.dormNumber;
+
+            if (r.parcels.length > 0) {
+                let start = formData.items.length;
+                while (start > 0 && isBlankItem(formData.items[start - 1])) start--;
+
+                const needed = start + r.parcels.length;
+                while (formData.items.length < needed) addFormItem();
+                formData.items.length = needed; // drop leftover empty rows
+
+                r.parcels.forEach((p, k) => {
+                    formData.items[start + k] = {
+                        tracking: p.trackingNumber || '',
+                        transport: TRANSPORTS.some(t => t.id === p.carrier) ? p.carrier : '',
+                        isCOD: p.destination === 'ปลายทาง' ? true : p.destination === 'ไม่ปลายทาง' ? false : null,
+                        isCompleted: false
+                    };
+                });
+            }
+
+            showMissingFields = true;
+            setQuickAddStep('closed', { text: '', result: null });
+            updateFormUI();
+            // after addFormItem's own scroll-to-bottom
+            setTimeout(() => document.getElementById('form-scroll-area').scrollTo({ top: 0, behavior: 'smooth' }), 120);
+            showToast('เติมข้อมูลลงฟอร์มแล้ว กรุณาตรวจสอบก่อนบันทึก', 'success');
         }
 
         async function saveRecord() {
             if (!formData.name.trim()) {
+                showMissingFields = true;
+                updateFormUI();
                 showToast("กรุณากรอกชื่อ-นามสกุล", "error");
                 document.getElementById('input-name').focus();
                 return;
@@ -1128,8 +1329,22 @@
                 showToast("กรุณาเพิ่มรายการพัสดุอย่างน้อย 1 รายการ", "error");
                 return;
             }
+            if (!formData.room) {
+                showMissingFields = true;
+                updateFormUI();
+                showToast("กรุณาเลือกเลขหอพัก", "error");
+                return;
+            }
             if (formData.items.some(item => !item.transport)) {
+                showMissingFields = true;
+                renderFormItems();
                 showToast("กรุณาเลือกขนส่งให้ครบทุกรายการ", "error");
+                return;
+            }
+            if (formData.items.some(item => item.isCOD == null)) {
+                showMissingFields = true;
+                renderFormItems();
+                showToast("กรุณาเลือกปลายทาง/ไม่ปลายทางให้ครบทุกรายการ", "error");
                 return;
             }
 
