@@ -451,17 +451,46 @@
             return String(e.message || e).slice(0, 120);
         }
 
+        // Hugging Face's gateway sometimes answers 502/503/504 (or the phone drops the
+        // connection) without the request ever reaching our server. Those are safe to
+        // retry, so every call below retries them a few times before showing an error.
+        const RETRY_STATUS = [502, 503, 504];
+        const RETRY_DELAYS_MS = [400, 1200, 2500];
+        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+        let hasLoadedOnce = false;
+        let lastLoadError = '';
+
+        class HttpError extends Error {
+            constructor(status, message) { super(message); this.status = status; }
+        }
+
+        async function fetchJson(path, init) {
+            for (let attempt = 0; ; attempt++) {
+                try {
+                    const res = await fetch(`${API_BASE_URL}${path}`, init);
+                    if (res.ok) return await res.json();
+                    const body = await res.json().catch(() => ({}));
+                    const err = new HttpError(res.status, `HTTP ${res.status}${body.error ? `: ${body.error}` : ''}`);
+                    if (!RETRY_STATUS.includes(res.status) || attempt >= RETRY_DELAYS_MS.length) throw err;
+                    console.warn(`${init?.method || 'GET'} ${path} -> ${res.status}, retrying`);
+                } catch (e) {
+                    if (e instanceof HttpError && !RETRY_STATUS.includes(e.status)) throw e;
+                    if (attempt >= RETRY_DELAYS_MS.length) throw e;
+                    if (!(e instanceof HttpError)) console.warn(`${init?.method || 'GET'} ${path} network error, retrying`, e);
+                }
+                await sleep(RETRY_DELAYS_MS[attempt]);
+            }
+        }
+
         async function loadData() {
             try {
-                const res = await fetch(`${API_BASE_URL}/api/records`);
-                if (!res.ok) {
-                    const body = await res.json().catch(() => ({}));
-                    throw new Error(`HTTP ${res.status}${body.error ? `: ${body.error}` : ''}`);
-                }
-                records = await res.json();
+                records = await fetchJson('/api/records', { cache: 'no-store' });
+                hasLoadedOnce = true;
+                lastLoadError = '';
             } catch (e) {
                 console.error("Error loading data from server", e);
-                showToast(`โหลดข้อมูลจากเซิร์ฟเวอร์ไม่สำเร็จ (${errorReason(e)})`, "error");
+                lastLoadError = errorReason(e);
+                showToast(`โหลดข้อมูลจากเซิร์ฟเวอร์ไม่สำเร็จ (${lastLoadError})`, "error");
             }
         }
 
@@ -479,16 +508,14 @@
         }
 
         async function apiRequest(method, path, body) {
-            const res = await fetch(`${API_BASE_URL}${path}`, {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-            });
-            if (!res.ok) {
-                const data = await res.json().catch(() => ({}));
-                throw new Error(`HTTP ${res.status}${data.error ? `: ${data.error}` : ''}`);
+            const init = { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+            try {
+                return await fetchJson(path, init);
+            } catch (e) {
+                // A retried "add" whose first try actually got through: the record exists.
+                if (method === 'POST' && path === '/api/records' && e.status === 409) return body;
+                throw e;
             }
-            return res.json();
         }
 
         // Sends only the ONE record that changed, so devices don't overwrite each other.
@@ -585,6 +612,17 @@
         function renderApp() {
             const page = document.getElementById('page');
             renderTabs();
+
+            if (!hasLoadedOnce && lastLoadError) {
+                page.innerHTML = `
+                    <div class="flex flex-col items-center text-center text-gray-500 py-16">
+                        <div class="w-16 h-16 rounded-full bg-white shadow-sm flex items-center justify-center text-2xl mb-3">📡</div>
+                        <p class="text-base text-gray-700">โหลดข้อมูลไม่สำเร็จ</p>
+                        <p class="text-sm text-gray-400 mt-1">${escapeHtml(lastLoadError)}</p>
+                        <button onclick="refreshData()" class="${BTN.primary} mt-5">ลองอีกครั้ง</button>
+                    </div>`;
+                return;
+            }
 
             if (currentTab === 'all') renderAllTab(page);
             else if (currentTab === 'history') renderHistory(page);
