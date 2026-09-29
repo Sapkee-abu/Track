@@ -445,14 +445,23 @@
 
         // ---------- Server sync ----------
 
+        // Short reason shown in error toasts, so we know where it failed.
+        function errorReason(e) {
+            if (e instanceof TypeError) return 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้';   // network / server not reachable
+            return String(e.message || e).slice(0, 120);
+        }
+
         async function loadData() {
             try {
                 const res = await fetch(`${API_BASE_URL}/api/records`);
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                if (!res.ok) {
+                    const body = await res.json().catch(() => ({}));
+                    throw new Error(`HTTP ${res.status}${body.error ? `: ${body.error}` : ''}`);
+                }
                 records = await res.json();
             } catch (e) {
                 console.error("Error loading data from server", e);
-                showToast("โหลดข้อมูลจากเซิร์ฟเวอร์ไม่สำเร็จ", "error");
+                showToast(`โหลดข้อมูลจากเซิร์ฟเวอร์ไม่สำเร็จ (${errorReason(e)})`, "error");
             }
         }
 
@@ -475,7 +484,10 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body)
             });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(`HTTP ${res.status}${data.error ? `: ${data.error}` : ''}`);
+            }
             return res.json();
         }
 
@@ -490,7 +502,7 @@
                 })
                 .catch(async (e) => {
                     console.error("Error saving data to server", e);
-                    showToast("บันทึกข้อมูลไปเซิร์ฟเวอร์ไม่สำเร็จ", "error");
+                    showToast(`บันทึกข้อมูลไปเซิร์ฟเวอร์ไม่สำเร็จ (${errorReason(e)})`, "error");
                     await loadData();
                     renderApp();
                 });
