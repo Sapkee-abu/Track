@@ -355,7 +355,7 @@
             return '<div class="space-y-4">' + DORM_ROOMS
                 .filter(room => grouped[room] && grouped[room].length > 0)
                 .map(room => `
-                    <section class="card p-2 scroll-mt-20" data-room="${escapeHtml(room)}">
+                    <section class="card p-2">
                         <div class="flex items-center justify-between px-3 pt-2 pb-1.5">
                             <span class="text-sm font-semibold px-3 py-1 rounded-full ${chip}">หอพัก ${escapeHtml(room)}</span>
                             <span class="flex items-center gap-2">
@@ -419,7 +419,7 @@
 
         // Summary card: total pieces + people, and one chip per courier.
         // clickable = chips switch to that courier's tab.
-        function totalsCard({ label, total, people, byTransport, tone = 'blue', clickable = false, byRoom = null }) {
+        function totalsCard({ label, total, people, byTransport, tone = 'blue', clickable = false }) {
             const big = tone === 'amber' ? 'text-amber-700' : 'text-blue-700';
             const chips = TRANSPORTS.map(t => {
                 const n = byTransport[t.id] || 0;
@@ -439,29 +439,7 @@
                         <span class="text-sm text-gray-400">${people} คน</span>
                     </div>
                     <div class="grid grid-cols-2 gap-2">${chips}</div>
-                    ${byRoom ? roomTotalsGrid(byRoom, tone) : ''}
                 </section>`;
-        }
-
-        // Pieces per dorm, in the normal dorm order. Tapping one scrolls to that dorm's card.
-        function roomTotalsGrid(byRoom, tone) {
-            const rooms = DORM_ROOMS.filter(room => byRoom[room]);
-            if (rooms.length === 0) return '';
-            const num = tone === 'amber' ? 'text-amber-800' : 'text-blue-700';
-            return `
-                <p class="text-xs text-gray-400 px-1 mt-4 mb-2">แยกตามหอพัก</p>
-                <div class="grid grid-cols-3 gap-2">
-                    ${rooms.map(room => `
-                        <button onclick="scrollToRoom('${escapeHtml(room)}')" class="min-w-0 flex flex-col items-center px-2 py-2 rounded-2xl bg-gray-50 hover:bg-gray-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300">
-                            <span class="text-xs text-gray-500 truncate max-w-full">หอ ${escapeHtml(room)}</span>
-                            <span class="text-base font-semibold ${num} leading-tight">${byRoom[room]} <span class="text-xs font-normal text-gray-400">ชิ้น</span></span>
-                        </button>`).join('')}
-                </div>`;
-        }
-
-        function scrollToRoom(room) {
-            const el = [...document.querySelectorAll('[data-room]')].find(e => e.dataset.room === room);
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
         function searchResultInfo(count, query) {
@@ -853,8 +831,7 @@
                 const totals = tallyItems(filtered);
                 area.innerHTML = totalsCard({
                     label: query.trim() ? 'รอส่งของ (ที่ค้นเจอ)' : 'รอส่งของทั้งหมด',
-                    total: totals.total, people: filtered.length, byTransport: totals.byTransport, tone: 'amber',
-                    byRoom: filtered.reduce((acc, r) => { acc[r.room] = (acc[r.room] || 0) + r.items.length; return acc; }, {})
+                    total: totals.total, people: filtered.length, byTransport: totals.byTransport, tone: 'amber'
                 }) + roomCards(filtered, record =>
                     recordRow(record, countBadge(`ครบ ${record.items.length} ชิ้น`, 'bg-amber-100 text-amber-800'), '', 'hover:bg-amber-50'),
                     'amber',
