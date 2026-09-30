@@ -348,7 +348,8 @@
                 </button>`;
         }
 
-        function roomCards(list, rowFn, tone = 'blue') {
+        // countItems (optional): (record) => pieces, shows the dorm's piece total in its header
+        function roomCards(list, rowFn, tone = 'blue', countItems = null) {
             const grouped = groupByRoom(list);
             const chip = tone === 'amber' ? 'bg-amber-100 text-amber-800' : 'bg-blue-50 text-blue-700';
             return '<div class="space-y-4">' + DORM_ROOMS
@@ -357,7 +358,10 @@
                     <section class="card p-2">
                         <div class="flex items-center justify-between px-3 pt-2 pb-1.5">
                             <span class="text-sm font-semibold px-3 py-1 rounded-full ${chip}">หอพัก ${escapeHtml(room)}</span>
-                            <span class="text-xs text-gray-400">${grouped[room].length} คน</span>
+                            <span class="flex items-center gap-2">
+                                ${countItems ? `<span class="text-sm font-semibold ${tone === 'amber' ? 'text-amber-800' : 'text-blue-700'}">${grouped[room].reduce((sum, r) => sum + countItems(r), 0)} ชิ้น</span>` : ''}
+                                <span class="text-xs text-gray-400">${grouped[room].length} คน</span>
+                            </span>
                         </div>
                         <div class="space-y-0.5">${grouped[room].map(rowFn).join('')}</div>
                     </section>
@@ -830,7 +834,8 @@
                     total: totals.total, people: filtered.length, byTransport: totals.byTransport, tone: 'amber'
                 }) + roomCards(filtered, record =>
                     recordRow(record, countBadge(`ครบ ${record.items.length} ชิ้น`, 'bg-amber-100 text-amber-800'), '', 'hover:bg-amber-50'),
-                    'amber'
+                    'amber',
+                    record => record.items.length
                 );
             });
         }
